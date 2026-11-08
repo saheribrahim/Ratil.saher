@@ -1,5 +1,5 @@
-// Recognition matching: Tarteel-style strict connected matching for Huruf Muqatta'ah & Tajweed rules in Ratil.saher
-const TH = { strict: [.90, .75], normal: [.70, .50], lenient: [.55, .35] };
+// Recognition matching: Tarteel-style strict connected Huruf Muqatta'ah matcher for Ratil.saher
+const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
 
 // ---------- Huruf Muqatta'ah ----------
 const MUQATTAAH_SET = new Set([
@@ -25,16 +25,16 @@ const ALL_NAMES = new Set(Object.values(LETTER_NAMES).flat().filter(x => x.lengt
 const nameOK = (tok, names) => names.includes(tok) ||
   (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 3 && tok.length >= 2 && sim(tok, nm) >= .65));
 
-// Tarteel-style robust matcher for connected Huruf Muqatta'ah
+// Tarteel-style strict connected matcher: FORBIDS single fragment advancing (e.g. "الف" alone is rejected)
 function muqMatch(rw, i, n) {
   if (!rw[i]) return 0;
   const targetNorm = normalizeArabic(n);
   const inputNorm = normalizeArabic(rw[i]);
 
-  // If spoken as a single connected word (e.g. "الم")
+  // 1. If spoken as a single connected word (e.g. "الم")
   if (inputNorm === targetNorm || sq(rw[i]) === sq(n)) return 1;
 
-  // If spoken as individual letter names (e.g. "الف لام ميم")
+  // 2. If spoken as individual letter names (e.g. "الف لام ميم") - MUST complete ALL letters of the word
   const L = [...n];
   let k = i, ok = true;
   for (const ch of L) {
@@ -46,22 +46,19 @@ function muqMatch(rw, i, n) {
       break;
     }
   }
+  
+  // If user only said "الف" (partial match), 'ok' will be false -> returns 0 (No advancing!)
   if (ok) return k - i;
 
-  // Flexible phonetic merging for browser speech fragments
+  // 3. Flexible phonetic merging for browser speech fragments, but strictly requiring full length
   const full = sq(L.map(ch => (LETTER_NAMES[ch] || [ch])[0]).join(""));
   for (let m = 1; m <= Math.min(L.length + 2, rw.length - i); m++) {
     const joined = sq(rw.slice(i, i + m).join(""));
-    if (joined.length >= full.length * .6 && sim(joined, full) >= .75) return m;
+    // Ensure it's not just a tiny fragment like "الف"
+    if (joined.length >= full.length * .8 && sim(joined, full) >= .80) return m;
   }
 
-  // Fallback: If browser completely misses hearing the letters due to stretching, 
-  // but user is clearly reciting at this position, allow smooth passage to prevent getting stuck
-  if (inputNorm.includes("ال") || inputNorm.includes("الف") || inputNorm === "") {
-    return 1; 
-  }
-
-  return 0;
+  return 0; // If incomplete, returns 0 so it stays locked on the Muqatta'ah word until fully recited
 }
 
 const forced = new Set();
