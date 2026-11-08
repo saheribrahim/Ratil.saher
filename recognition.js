@@ -1,18 +1,23 @@
-// Recognition matching: Strict letter-by-letter completion check for Ratil.saher
-const TH = { strict: [.90, .78], normal: [.75, .55], lenient: [.65, .45] };
+// Recognition matching: Ultimate robust Huruf Muqatta'ah & Tajweed matcher for Ratil.saher
+const TH = { strict: [.82, .68], normal: [.60, .40], lenient: [.50, .30] };
 
 // Official set of Quranic Huruf Muqatta'ah
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "ق", "ن"
 ]);
 
-// Helper to normalize Arabic text
+// Helper to normalize Arabic text and handle speech recognition variations
 function normalizeArabic(str) {
  if (!str) return "";
  let cleanStr = str.trim();
 
+ // Comprehensive spoken phonetic mapping for Huruf Muqatta'ah
  const spokenMap = {
   "الف لام ميم": "الم",
+  "الف لام": "الم",
+  "الف": "الم",
+  "لام": "الم",
+  "ميم": "الم",
   "الف لام ميم صاد": "المص",
   "الف لام راء": "الر",
   "الف لام ميم راء": "المر",
@@ -48,7 +53,7 @@ function normalizeArabic(str) {
  return normalized;
 }
 
-// Strict similarity check ensuring all letters must match completely (no shortcuts)
+// Enhanced similarity check with tolerant matching for fragmented speech
 function enhancedSim(w1, w2) {
  if (!w1 || !w2) return 0;
  
@@ -57,17 +62,16 @@ function enhancedSim(w1, w2) {
  
  if (norm1 === norm2) return 1.0;
 
- // Strict check for Huruf Muqatta'ah: Must spell out and match all letters completely
+ // Check if either is a Muqatta'ah letter
  const isM1 = MUQATTAAH_SET.has(norm1) || MUQATTAAH_SET.has(w1.trim());
  const isM2 = MUQATTAAH_SET.has(norm2) || MUQATTAAH_SET.has(w2.trim());
 
  if (isM1 || isM2) {
+  // Allow flexible match for Muqatta'ah if speech recognition captures parts of it
+  if ((norm1 === "الم" || norm2 === "الم") && (norm1.includes("ال") || norm2.includes("ال"))) {
+   return 0.95; // Accept it directly to prevent blocking the reciter
+  }
   return norm1 === norm2 ? 1.0 : 0.0;
- }
-
- // If reciting a full word like "الم", do not accept if only "ال" was spoken
- if ((w1 === "الم" || w2 === "الم") && (norm1 === "ال" || norm2 === "ال")) {
-  return 0.4; // Low score, forces user to complete pronouncing the full word "ميم"
  }
 
  let baseScore = sim(w1, w2);
@@ -95,7 +99,7 @@ function verseIsRepeatedCorrectly(start, end, rw, threshold) {
 }
 
 function trial(rw) {
- const [okT, nearT] = TH.strict; // Use strict threshold to ensure complete recitation
+ const [okT, nearT] = TH.normal;
  const s = baseSt.slice(), h = hd.slice(); let p = basePos;
  for (let k = basePos; k < h.length; k++) h[k] = "";
  const end = Math.min(lim, words.length);
@@ -106,22 +110,27 @@ function trial(rw) {
   while (verseStart > 0 && words[verseStart - 1].v === verse) verseStart--;
   while (verseEnd < end && words[verseEnd].v === verse) verseEnd++;
 
+  let currentSpoken = rw[i];
+  if (i + 1 < rw.length && (rw[i] === "الف" || rw[i] === "ال")) {
+   currentSpoken = rw[i] + " " + rw[i + 1];
+  }
+
   let hit = -1, score = 0, used = 1;
   for (let j = p; j < Math.min(p + 6, verseEnd); j++) {
-   let sc = enhancedSim(rw[i], words[j].n), u = 1;
+   let sc = enhancedSim(currentSpoken, words[j].n), u = 1;
    
    if (i + 1 < rw.length) {
-    const combinedRw = rw[i] + " " + rw[i + 1];
+    const combinedRw = rw[i] + rw[i + 1];
     const m = enhancedSim(combinedRw, words[j].n);
     if (m > sc + .05) { sc = m; u = 2; }
    }
    if (j + 1 < verseEnd) {
-    const m = enhancedSim(rw[i], words[j].n + words[j + 1].n);
-    if (m >= .80 && m > sc) { sc = m; u = -2; }
+    const m = enhancedSim(currentSpoken, words[j].n + words[j + 1].n);
+    if (m >= .70 && m > sc) { sc = m; u = -2; }
    }
    if (sc >= nearT && sc > score + (j > p ? .05 : 0)) {
     hit = j; score = sc; used = u;
-    if (sc >= 0.95) break; // Require high accuracy for letter completeness
+    if (sc >= 0.85) break;
    }
   }
   
@@ -160,7 +169,7 @@ function trial(rw) {
  while (p < end && s[p] === "ok") p++;
  let sc = 0; 
  s.forEach((x, k) => { 
-  if (k >= basePos && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.2; 
+  if (k >= basePos && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.1; 
  });
  return { s, p, h, sc };
 }
