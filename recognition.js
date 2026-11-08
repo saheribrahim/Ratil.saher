@@ -1,17 +1,16 @@
-// Recognition matching: Ultimate robust Huruf Muqatta'ah & Tajweed matcher for Ratil.saher
-const TH = { strict: [.82, .68], normal: [.60, .40], lenient: [.50, .30] };
+// Recognition matching: Advanced continuous speech & Huruf Muqatta'ah grouping for Ratil.saher
+const TH = { strict: [.80, .65], normal: [.58, .38], lenient: [.45, .25] };
 
 // Official set of Quranic Huruf Muqatta'ah
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "ق", "ن"
 ]);
 
-// Helper to normalize Arabic text and handle speech recognition variations
+// Helper to normalize Arabic text
 function normalizeArabic(str) {
  if (!str) return "";
  let cleanStr = str.trim();
 
- // Comprehensive spoken phonetic mapping for Huruf Muqatta'ah
  const spokenMap = {
   "الف لام ميم": "الم",
   "الف لام": "الم",
@@ -53,7 +52,7 @@ function normalizeArabic(str) {
  return normalized;
 }
 
-// Enhanced similarity check with tolerant matching for fragmented speech
+// Enhanced similarity check with flexible continuous matching
 function enhancedSim(w1, w2) {
  if (!w1 || !w2) return 0;
  
@@ -62,14 +61,13 @@ function enhancedSim(w1, w2) {
  
  if (norm1 === norm2) return 1.0;
 
- // Check if either is a Muqatta'ah letter
  const isM1 = MUQATTAAH_SET.has(norm1) || MUQATTAAH_SET.has(w1.trim());
  const isM2 = MUQATTAAH_SET.has(norm2) || MUQATTAAH_SET.has(w2.trim());
 
  if (isM1 || isM2) {
-  // Allow flexible match for Muqatta'ah if speech recognition captures parts of it
-  if ((norm1 === "الم" || norm2 === "الم") && (norm1.includes("ال") || norm2.includes("ال"))) {
-   return 0.95; // Accept it directly to prevent blocking the reciter
+  // Allow seamless match if user speaks parts of Muqatta'ah continuously
+  if ((norm1 === "الم" || norm2 === "الم") && (norm1.includes("ال") || norm2.includes("ال") || norm1.includes("الف") || norm2.includes("الف"))) {
+   return 0.90; 
   }
   return norm1 === norm2 ? 1.0 : 0.0;
  }
@@ -110,27 +108,35 @@ function trial(rw) {
   while (verseStart > 0 && words[verseStart - 1].v === verse) verseStart--;
   while (verseEnd < end && words[verseEnd].v === verse) verseEnd++;
 
+  // Combine consecutive spoken words into a single continuous phrase (e.g. "الف" + "لام" + "ميم")
   let currentSpoken = rw[i];
-  if (i + 1 < rw.length && (rw[i] === "الف" || rw[i] === "ال")) {
-   currentSpoken = rw[i] + " " + rw[i + 1];
+  if (i + 2 < rw.length) {
+   currentSpoken = rw[i] + " " + rw[i+1] + " " + rw[i+2];
+  } else if (i + 1 < rw.length) {
+   currentSpoken = rw[i] + " " + rw[i+1];
   }
 
   let hit = -1, score = 0, used = 1;
   for (let j = p; j < Math.min(p + 6, verseEnd); j++) {
    let sc = enhancedSim(currentSpoken, words[j].n), u = 1;
    
-   if (i + 1 < rw.length) {
-    const combinedRw = rw[i] + rw[i + 1];
-    const m = enhancedSim(combinedRw, words[j].n);
-    if (m > sc + .05) { sc = m; u = 2; }
+   if (i + 2 < rw.length) {
+    const triple = rw[i] + rw[i+1] + rw[i+2];
+    const m = enhancedSim(triple, words[j].n);
+    if (m > sc) { sc = m; u = 3; }
+   } else if (i + 1 < rw.length) {
+    const double = rw[i] + rw[i+1];
+    const m = enhancedSim(double, words[j].n);
+    if (m > sc) { sc = m; u = 2; }
    }
+
    if (j + 1 < verseEnd) {
     const m = enhancedSim(currentSpoken, words[j].n + words[j + 1].n);
-    if (m >= .70 && m > sc) { sc = m; u = -2; }
+    if (m >= .65 && m > sc) { sc = m; u = -2; }
    }
    if (sc >= nearT && sc > score + (j > p ? .05 : 0)) {
     hit = j; score = sc; used = u;
-    if (sc >= 0.85) break;
+    if (sc >= 0.80) break;
    }
   }
   
@@ -145,8 +151,8 @@ function trial(rw) {
   } else {
    s[hit] = lab;
    h[hit] = rw[i];
-   p = hit + 1;
-   if (used === 2) i++;
+   p = hit + u; // Advance by the number of grouped spoken words
+   i += (u - 1);
   }
 
   if (p >= verseEnd) {
