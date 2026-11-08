@@ -1,12 +1,13 @@
-// Recognition matching: Optimized for 7 Core Tajweed Rules (Qalqalah, Ghunnah, Madd, Iqlab, Ikhfa, Idgham with/without Ghunnah)
-const TH = { strict: [.85, .7], normal: [.68, .48], lenient: [.58, .38] };
+// Recognition matching: optimized for Madd (المدود) and Huruf Muqatta'ah (الحروف المقطعة مثل الم، كهيعص).
+const TH = { strict: [.85, .7], normal: [.7, .5], lenient: [.6, .4] };
 
-// Helper to normalize Arabic text and handle 7 core Tajweed rules & Huruf Muqatta'ah
+// Helper to normalize Arabic text, handle Madd, and map disjointed letters (فواتح السور)
 function normalizeArabic(str) {
  if (!str) return "";
+ 
  let cleanStr = str.trim();
 
- // Special mapping for Huruf Muqatta'ah (فواتح السور)
+ // Phonetic mapping for Huruf Muqatta'ah (الفواتح) when spoken out loud vs written text
  const muqattaahMap = {
   "الف لام ميم": "الم",
   "كاف هاء يا عين صاد": "كهيعص",
@@ -21,25 +22,19 @@ function normalizeArabic(str) {
  }
 
  let normalized = cleanStr
-  .replace(/[\u064B-\u065F\u0670]/g, "") // Remove Tashkeel & Tanween for core word matching
+  .replace(/[\u064B-\u065F\u0670]/g, "") // Remove Tashkeel
   .replace(/[إأآا]/g, "ا")                 // Normalize Alefs
   .replace(/ة/g, "ه")                     // Normalize Teh Marbuta to Heh
   .replace(/ى/g, "ي")                     // Normalize Alef Maksura to Yeh
   .replace(/ـ/g, "")                      // Remove Tatweel
-  // Handle Madd (المدود) & Elongation stretching repetitions
+  // Handle Madd / letter elongation (e.g. repeating letters due to stretching)
   .replace(/(.)\1{2,}/g, "$1$1") 
   .trim();
-
- // Handle Lam Shamsiyyah (الإدغام الشمسي)
- const sunLetters = /[تثدذرزسصضطظلن]/;
- if (normalized.startsWith("ال") && normalized.length > 3 && sunLetters.test(normalized[2])) {
-  normalized = normalized.slice(2);
- }
 
  return normalized;
 }
 
-// Enhanced similarity check with special handling for Tajweed variations, Madd, and Disjointed letters
+// Enhanced similarity check with special handling for disjointed letters and extended Madd
 function enhancedSim(w1, w2) {
  if (!w1 || !w2) return 0;
  const norm1 = normalizeArabic(w1);
@@ -47,7 +42,7 @@ function enhancedSim(w1, w2) {
  
  if (norm1 === norm2) return 1.0;
 
- // Check if it's a disjointed letter match (فواتح السور)
+ // Check if it's a disjointed letter match
  const specials = {
   "الم": ["الف", "لام", "ميم"],
   "كهيعص": ["كاف", "هاء", "يا", "عين", "صاد"],
@@ -137,7 +132,7 @@ function trial(rw) {
   const verse = words[start].v;
   let finish = start + 1;
   while (finish < end && words[finish].v === verse) finish++;
-  if (verse < currentVerse && s.slice(start, finish).some(status => status!=="ok") && verseIsRepeatedCorrectly(start, finish, rw, okT)) {
+  if (verse < currentVerse && s.slice(start, finish).some(status => status !== "ok") && verseIsRepeatedCorrectly(start, finish, rw, okT)) {
    for (let k = start; k < finish; k++) { s[k] = "ok"; h[k] = words[k].n; }
   }
   start = finish;
