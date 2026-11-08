@@ -1,14 +1,14 @@
 // Recognition matching: strict letter completeness, no premature advancing,
 // and correct handling of Huruf Muqatta'ah (الم، حم، كهيعص ...)
 const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
-
+ 
 // ---------- Huruf Muqatta'ah ----------
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
 ]);
 // Surahs that open with Muqatta'ah letters (surah 42 has two: حم then عسق)
 const MUQ_SURAHS = new Set([2,3,7,10,11,12,13,14,15,19,20,26,27,28,29,30,31,32,36,38,40,41,42,43,44,45,46,50,68]);
-
+ 
 // How each letter is SPOKEN (names are already in the normalized form of norm())
 const LETTER_NAMES = {
   "ا": ["الف", "ا"], "ل": ["لام", "ل"], "م": ["ميم", "م"], "ص": ["صاد", "ص"],
@@ -16,27 +16,43 @@ const LETTER_NAMES = {
   "ع": ["عين", "ع"], "ط": ["طا", "طاء", "ط"], "س": ["سين", "س"], "ح": ["حا", "حاء", "ح"],
   "ق": ["قاف", "ق"], "ن": ["نون", "ن"]
 };
-
+ 
 // Is expected word j a Muqatta'ah word? (decided by POSITION, so an ordinary word like "أَلَمْ" is never confused with "الٓمٓ")
 function isMuq(j) {
   const s = +$("surah").value, w = words[j];
   return !!w && MUQ_SURAHS.has(s) && MUQATTAAH_SET.has(w.n) && (w.v === 0 || (s === 42 && w.v === 1));
 }
-
+ 
+// Letter names the recognizer might write slightly differently (لآم، لا ...) are accepted,
+// but never the name of a DIFFERENT letter (كاف is not قاف, ميم is not لام).
+const ALL_NAMES = new Set(Object.values(LETTER_NAMES).flat().filter(x => x.length > 1));
+const nameOK = (tok, names) => names.includes(tok) ||
+  (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 3 && tok.length >= 2 && sim(tok, nm) >= .67));
+ 
 // Returns how many recognized tokens (starting at i) fully match the Muqatta'ah word, or 0.
-// Accepts: the written form ("الم") OR ALL the letter names in order ("الف لام ميم").
+// Accepts: the written form ("الم"), ALL the letter names in order ("الف لام ميم"),
+// or names glued together by the recognizer ("الفلام ميم").
 // A partial reading ("الف" only, or "الف لام") returns 0  ->  not accepted, no advancing.
 function muqMatch(rw, i, n) {
   if (rw[i] === n) return 1;
-  let k = i;
-  for (const ch of n) {
+  const L = [...n];
+  let k = i, ok = true;
+  for (const ch of L) {
     const names = LETTER_NAMES[ch] || [ch];
-    if (k < rw.length && names.includes(rw[k])) k++;
-    else return 0;
+    if (k < rw.length && nameOK(rw[k], names)) k++; else { ok = false; break; }
   }
-  return k - i;
+  if (ok) return k - i;
+  const full = L.map(ch => (LETTER_NAMES[ch] || [ch])[0]).join("");
+  for (let m = 1; m <= Math.min(L.length, rw.length - i); m++) {
+    const joined = rw.slice(i, i + m).join("");
+    if (joined.length >= full.length * .7 && sim(joined, full) >= .85) return m;
+  }
+  return 0;
 }
-
+ 
+// Words the user marked as correct by hand (button in the word sheet)
+const forced = new Set();
+ 
 // ---------- Normalization & similarity ----------
 function normalizeArabic(str) {
   if (!str) return "";
@@ -55,7 +71,7 @@ function normalizeArabic(str) {
   }
   return normalized;
 }
-
+ 
 function enhancedSim(w1, w2) {
   if (!w1 || !w2) return 0;
   const a = normalizeArabic(w1), b = normalizeArabic(w2);
@@ -65,7 +81,7 @@ function enhancedSim(w1, w2) {
   const strip = x => x.replace(/[ا\u0621]/g, "");
   return Math.max(sim(w1, w2), sim(a, b), 0.98 * sim(strip(a), strip(b)));
 }
-
+ 
 // ---------- Re-reciting an earlier verse completely ----------
 function verseIsRepeatedCorrectly(start, end, rw, threshold) {
   for (let i = 0; i < rw.length; i++) {
@@ -87,20 +103,22 @@ function verseIsRepeatedCorrectly(start, end, rw, threshold) {
   }
   return false;
 }
-
+ 
 // ---------- Main alignment ----------
 function trial(rw) {
   const [okT, nearT] = TH.strict;          // change to TH.normal for a more forgiving app
   const s = baseSt.slice(), h = hd.slice(); let p = basePos;
   for (let k = basePos; k < h.length; k++) h[k] = "";
   const end = Math.min(lim, words.length);
-
+  const skipForced = () => { while (p < end && forced.has(p)) { s[p] = "ok"; h[p] = h[p] || "✓"; p++; } };
+  skipForced();
+ 
   for (let i = 0; i < rw.length && p < end; i++) {
     const verse = words[p].v;
     let verseStart = p, verseEnd = p + 1;
     while (verseStart > 0 && words[verseStart - 1].v === verse) verseStart--;
     while (verseEnd < end && words[verseEnd].v === verse) verseEnd++;
-
+ 
     let hit = -1, score = 0, used = 1;
     for (let j = p; j < Math.min(p + 6, verseEnd); j++) {
       let sc = 0, u = 1;
@@ -125,7 +143,7 @@ function trial(rw) {
       }
     }
     if (hit < 0) continue;
-
+ 
     for (let k = p; k < hit; k++) s[k] = "miss";
     const lab = score >= okT ? "ok" : "near";
     if (used === -2) {
@@ -138,7 +156,7 @@ function trial(rw) {
       p = hit + 1;
       i += used - 1;                                   // skip the extra tokens that were used
     }
-
+ 
     // Never move to the next verse while words of this verse are still missing:
     // go back to the first missing word and keep listening for it.
     if (p >= verseEnd) {
@@ -148,8 +166,9 @@ function trial(rw) {
       }
       if (firstUnfinished !== -1) p = firstUnfinished;
     }
+    skipForced();
   }
-
+ 
   // If an earlier verse was recited again completely, accept it (not in memorization mode)
   if (!memOn) {
     const currentVerse = basePos < words.length ? words[basePos].v : Infinity;
@@ -164,13 +183,13 @@ function trial(rw) {
       start = finish;
     }
   }
-
+ 
   while (p < end && s[p] === "ok") p++;
   let sc = 0;
   s.forEach((x, k) => { if (k >= basePos && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.2; });
   return { s, p, h, sc };
 }
-
+ 
 function alignBest(cands) {
   let b = null;
   for (const rw of cands) {
@@ -179,8 +198,12 @@ function alignBest(cands) {
   }
   if (b) { st = b.s; pos = b.p; hd = b.h; }
   render();
+  if (listening && pos < words.length && isMuq(pos) && st[pos] !== "ok") {
+    const spoken = [...words[pos].n].map(c => (LETTER_NAMES[c] || [c])[0]).join(" · ");
+    msg("🔤 حروف مقطعة: انطقها بأسماء حروفها (" + spoken + ") أو كما تُكتب · Say the letter names");
+  }
 }
-
+ 
 function htmlOf(i) {
   const w = words[i];
   if ($("tjw").checked) {
@@ -189,6 +212,7 @@ function htmlOf(i) {
   }
   return w.t;
 }
-
+ 
 const fl = t => ((t.match(/[\u0621-\u064A\u0671][^\u0621-\u064A\u0671]*/) || [t])[0]) + "…";
 $("mMask").onchange = render;
+ 
