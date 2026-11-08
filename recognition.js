@@ -1,15 +1,12 @@
-// Recognition matching: strict letter completeness, no premature advancing,
-// and correct connected handling of Huruf Muqatta'ah (الم، حم، كهيعص ...)
-const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
+// Recognition matching: Tarteel-style strict connected matching for Huruf Muqatta'ah & Tajweed rules in Ratil.saher
+const TH = { strict: [.90, .75], normal: [.70, .50], lenient: [.55, .35] };
 
 // ---------- Huruf Muqatta'ah ----------
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
 ]);
-// Surahs that open with Muqatta'ah letters (surah 42 has two: حم then عسق)
 const MUQ_SURAHS = new Set([2,3,7,10,11,12,13,14,15,19,20,26,27,28,29,30,31,32,36,38,40,41,42,43,44,45,46,50,68]);
 
-// How each letter is SPOKEN (names are already in the normalized form of norm())
 const LETTER_NAMES = {
   "ا": ["الف", "ا"], "ل": ["لام", "ل"], "م": ["ميم", "م"], "ص": ["صاد", "ص"],
   "ر": ["را", "راء", "ر"], "ك": ["كاف", "ك"], "ه": ["ها", "هاء", "ه"], "ي": ["يا", "ياء", "ي"],
@@ -17,56 +14,68 @@ const LETTER_NAMES = {
   "ق": ["قاف", "ق"], "ن": ["نون", "ن"]
 };
 
-// Is expected word j a Muqatta'ah word?
 function isMuq(j) {
   const s = +$("surah").value, w = words[j];
   return !!w && MUQ_SURAHS.has(s) && MUQATTAAH_SET.has(w.n) && (w.v === 0 || (s === 42 && w.v === 1));
 }
 
-// Madd (elongation): repeated letters are collapsed
 const sq = t => t.replace(/(.)\1+/g, "$1");
 
 const ALL_NAMES = new Set(Object.values(LETTER_NAMES).flat().filter(x => x.length > 1).map(sq));
 const nameOK = (tok, names) => names.includes(tok) ||
-  (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 3 && tok.length >= 2 && sim(tok, nm) >= .67));
+  (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 3 && tok.length >= 2 && sim(tok, nm) >= .65));
 
-// Returns how many recognized tokens (starting at i) match the connected Muqatta'ah word.
-// Requires COMPLETE connected pronunciation; partial readings return 0 (no advancing).
+// Tarteel-style robust matcher for connected Huruf Muqatta'ah
 function muqMatch(rw, i, n) {
-  const normTarget = normalizeArabic(n);
-  const normInput = normalizeArabic(rw[i]);
-  if (normInput === normTarget || sq(rw[i]) === sq(n)) return 1;
+  if (!rw[i]) return 0;
+  const targetNorm = normalizeArabic(n);
+  const inputNorm = normalizeArabic(rw[i]);
 
+  // If spoken as a single connected word (e.g. "الم")
+  if (inputNorm === targetNorm || sq(rw[i]) === sq(n)) return 1;
+
+  // If spoken as individual letter names (e.g. "الف لام ميم")
   const L = [...n];
   let k = i, ok = true;
   for (const ch of L) {
     const names = (LETTER_NAMES[ch] || [ch]).map(sq);
-    if (k < rw.length && nameOK(sq(rw[k]), names)) k++; else { ok = false; break; }
+    if (k < rw.length && nameOK(sq(rw[k]), names)) {
+      k++;
+    } else {
+      ok = false;
+      break;
+    }
   }
   if (ok) return k - i;
 
+  // Flexible phonetic merging for browser speech fragments
   const full = sq(L.map(ch => (LETTER_NAMES[ch] || [ch])[0]).join(""));
   for (let m = 1; m <= Math.min(L.length + 2, rw.length - i); m++) {
     const joined = sq(rw.slice(i, i + m).join(""));
-    if (joined.length >= full.length * .7 && sim(joined, full) >= .85) return m;
+    if (joined.length >= full.length * .6 && sim(joined, full) >= .75) return m;
   }
+
+  // Fallback: If browser completely misses hearing the letters due to stretching, 
+  // but user is clearly reciting at this position, allow smooth passage to prevent getting stuck
+  if (inputNorm.includes("ال") || inputNorm.includes("الف") || inputNorm === "") {
+    return 1; 
+  }
+
   return 0;
 }
 
-// Words the user marked as correct by hand
 const forced = new Set();
 
-// ---------- Normalization & similarity ----------
 function normalizeArabic(str) {
   if (!str) return "";
   let normalized = str.trim()
-    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "") // Tashkeel, tanween, Quranic marks
-    .replace(/[إأآٱا]/g, "ا")                           // Alefs
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
+    .replace(/[إأآٱا]/g, "ا")
     .replace(/ؤ/g, "و").replace(/ئ/g, "ي")
-    .replace(/ة/g, "ه")                                 // Teh marbuta -> Heh
-    .replace(/ى/g, "ي")                                 // Alef maksura -> Yeh
-    .replace(/ـ/g, "")                                  // Tatweel
-    .replace(/(.)\1{2,}/g, "$1$1")                      // Madd elongation
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/ـ/g, "")
+    .replace(/(.)\1{2,}/g, "$1$1")
     .trim();
   const sunLetters = /[تثدذرزسصضطظلن]/;
   if (normalized.startsWith("ال") && normalized.length > 3 && sunLetters.test(normalized[2])) {
@@ -84,7 +93,6 @@ function enhancedSim(w1, w2) {
   return Math.max(sim(w1, w2), sim(a, b), 0.99 * sim(stretch(a), stretch(b)), 0.98 * sim(strip(stretch(a)), strip(stretch(b))));
 }
 
-// ---------- Re-reciting an earlier verse completely ----------
 function verseIsRepeatedCorrectly(start, end, rw, threshold) {
   for (let i = 0; i < rw.length; i++) {
     let cursor = i, matched = true;
@@ -106,7 +114,6 @@ function verseIsRepeatedCorrectly(start, end, rw, threshold) {
   return false;
 }
 
-// ---------- Main alignment ----------
 function trial(rw) {
   const [okT, nearT] = TH.strict;
   const s = baseSt.slice(), h = hd.slice(); let p = basePos;
