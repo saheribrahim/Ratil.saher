@@ -1,143 +1,168 @@
-// Recognition matching: compares what you recited with the text.
+// Recognition matching: optimized for Madd (المدود) and Huruf Muqatta'ah (الحروف المقطعة مثل الم، كهيعص).
+const TH = { strict: [.85, .7], normal: [.7, .5], lenient: [.6, .4] };
 
-// A new verse cannot start until every word in the current verse is green.
+// Helper to normalize Arabic text, handle Madd, and map disjointed letters (فواتح السور)
+function normalizeArabic(str) {
+ if (!str) return "";
+ 
+ let cleanStr = str.trim();
 
-const TH={strict:[.9,.75],normal:[.78,.6],lenient:[.7,.5]};
+ // Phonetic mapping for Huruf Muqatta'ah (الفواتح) when spoken out loud vs written text
+ const muqattaahMap = {
+  "الف لام ميم": "الم",
+  "كاف هاء يا عين صاد": "كهيعص",
+  "حيم": "حم",
+  "طا سين ميم": "طسم",
+  "الف لام ميم راء": "المر",
+  "الف لام راء": "الر"
+ };
 
-function verseIsRepeatedCorrectly(start,end,rw,threshold){
+ if (muqattaahMap[cleanStr]) {
+  cleanStr = muqattaahMap[cleanStr];
+ }
 
- const expected=words.slice(start,end).map(word=>word.n);
+ let normalized = cleanStr
+  .replace(/[\u064B-\u065F\u0670]/g, "") // Remove Tashkeel
+  .replace(/[إأآا]/g, "ا")                 // Normalize Alefs
+  .replace(/ة/g, "ه")                     // Normalize Teh Marbuta to Heh
+  .replace(/ى/g, "ي")                     // Normalize Alef Maksura to Yeh
+  .replace(/ـ/g, "")                      // Remove Tatweel
+  // Handle Madd / letter elongation (e.g. repeating letters due to stretching)
+  .replace(/(.)\1{2,}/g, "$1$1") 
+  .trim();
 
- if(!expected.length||expected.some(word=>!word))return false;
+ return normalized;
+}
 
- for(let i=0;i<rw.length;i++){
+// Enhanced similarity check with special handling for disjointed letters and extended Madd
+function enhancedSim(w1, w2) {
+ if (!w1 || !w2) return 0;
+ const norm1 = normalizeArabic(w1);
+ const norm2 = normalizeArabic(w2);
+ 
+ if (norm1 === norm2) return 1.0;
 
-  let cursor=i,matched=true;
+ // Check if it's a disjointed letter match
+ const specials = {
+  "الم": ["الف", "لام", "ميم"],
+  "كهيعص": ["كاف", "هاء", "يا", "عين", "صاد"],
+  "طسم": ["طا", "سين", "ميم"],
+  "المر": ["الف", "لام", "ميم", "راء"],
+  "الر": ["الف", "لام", "راء"]
+ };
 
-  for(const word of expected){
+ if (specials[w1] && specials[w1].includes(w2)) return 0.9;
+ if (specials[w2] && specials[w2].includes(w1)) return 0.9;
 
-   let best=-1,bestScore=0;
+ let baseScore = sim(w1, w2);
+ let normScore = sim(norm1, norm2);
+ return Math.max(baseScore, normScore);
+}
 
-   for(let j=cursor;j<Math.min(cursor+3,rw.length);j++){
-
-    const score=sim(word,rw[j]);
-
-    if(score>bestScore){bestScore=score;best=j}
-
+function verseIsRepeatedCorrectly(start, end, rw, threshold) {
+ const expected = words.slice(start, end).map(word => word.n);
+ if (!expected.length || expected.some(word => !word)) return false;
+ for (let i = 0; i < rw.length; i++) {
+  let cursor = i, matched = true;
+  for (const word of expected) {
+   let best = -1, bestScore = 0;
+   for (let j = cursor; j < Math.min(cursor + 5, rw.length); j++) {
+    const score = enhancedSim(word, rw[j]);
+    if (score > bestScore) { bestScore = score; best = j; }
    }
-
-   if(best<0||bestScore<threshold){matched=false;break}
-
-   cursor=best+1;
-
+   if (best < 0 || bestScore < threshold) { matched = false; break; }
+   cursor = best + 1;
   }
-
-  if(matched)return true;
-
+  if (matched) return true;
  }
-
  return false;
-
 }
 
-function trial(rw){
+function trial(rw) {
+ const [okT, nearT] = TH.normal;
+ const s = baseSt.slice(), h = hd.slice(); let p = basePos;
+ for (let k = basePos; k < h.length; k++) h[k] = "";
+ const end = Math.min(lim, words.length);
+ 
+ for (let i = 0; i < rw.length && p < end; i++) {
+  const verse = words[p].v;
+  let verseStart = p, verseEnd = p + 1;
+  while (verseStart > 0 && words[verseStart - 1].v === verse) verseStart--;
+  while (verseEnd < end && words[verseEnd].v === verse) verseEnd++;
 
- const[okT,nearT]=TH.normal;
-
- const s=baseSt.slice(),h=hd.slice();let p=basePos;
-
- for(let k=basePos;k<h.length;k++)h[k]="";
-
- const end=Math.min(lim,words.length);
-
- for(let i=0;i<rw.length&&p<end;i++){
-
-  const verse=words[p].v;
-
-  let verseStart=p,verseEnd=p+1;
-
-  while(verseStart>0&&words[verseStart-1].v===verse)verseStart--;
-
-  while(verseEnd<end&&words[verseEnd].v===verse)verseEnd++;
-
-
-
-  let hit=-1,score=0,used=1;
-
-  for(let j=p;j<Math.min(p+4,verseEnd);j++){
-
-   let sc=sim(rw[i],words[j].n),u=1;
-
-   if(i+1<rw.length){const m=sim(rw[i]+rw[i+1],words[j].n);if(m>sc+.05){sc=m;u=2}}
-
-   if(j+1<verseEnd){const m=sim(rw[i],words[j].n+words[j+1].n);if(m>=.85&&m>sc){sc=m;u=-2}}
-
-   if(sc>=nearT&&sc>score+(j>p?.08:0)){hit=j;score=sc;used=u;if(sc>=.95)break}
-
+  let hit = -1, score = 0, used = 1;
+  for (let j = p; j < Math.min(p + 6, verseEnd); j++) {
+   let sc = enhancedSim(rw[i], words[j].n), u = 1;
+   if (i + 1 < rw.length) {
+    const m = enhancedSim(rw[i] + rw[i + 1], words[j].n);
+    if (m > sc + .05) { sc = m; u = 2; }
+   }
+   if (j + 1 < verseEnd) {
+    const m = enhancedSim(rw[i], words[j].n + words[j + 1].n);
+    if (m >= .75 && m > sc) { sc = m; u = -2; }
+   }
+   if (sc >= nearT && sc > score + (j > p ? .05 : 0)) {
+    hit = j; score = sc; used = u;
+    if (sc >= .9) break;
+   }
+  }
+  if (hit < 0) continue;
+  for (let k = p; k < hit; k++) s[k] = "miss";
+  const lab = score >= okT ? "ok" : "near";
+  if (used === -2) {
+   s[hit] = s[hit + 1] = lab;
+   h[hit] = h[hit + 1] = rw[i];
+   p = hit + 2;
+  } else {
+   s[hit] = lab;
+   h[hit] = rw[i];
+   p = hit + 1;
+   if (used === 2) i++;
   }
 
-  if(hit<0)continue;
-
-  for(let k=p;k<hit;k++)s[k]="miss";
-
-  const lab=score>=okT?"ok":"near";
-
-  if(used===-2){s[hit]=s[hit+1]=lab;h[hit]=h[hit+1]=rw[i];p=hit+2}
-
-  else{s[hit]=lab;h[hit]=rw[i];p=hit+1;if(used===2)i++}
-
-
-
-  // Keep the cursor at the first incorrect or unfinished word in this verse.
-
-  if(p>=verseEnd){
-
-   const firstUnfinished=s.findIndex((status,index)=>index>=verseStart&&index<verseEnd&&status!=="ok");
-
-   if(firstUnfinished!==-1){p=firstUnfinished;break}
-
-   p=verseEnd;
-
+  if (p >= verseEnd) {
+   const firstUnfinished = s.findIndex((status, index) => index >= verseStart && index < verseEnd && status !== "ok");
+   if (firstUnfinished !== -1) { p = firstUnfinished; break; }
+   p = verseEnd;
   }
-
  }
 
-
-
- // Correctly repeating a previously attempted verse turns its words green.
-
- const currentVerse=basePos<words.length?words[basePos].v:Infinity;
-
- for(let start=0;start<end;){
-
-  const verse=words[start].v;
-
-  let finish=start+1;
-
-  while(finish<end&&words[finish].v===verse)finish++;
-
-  if(verse<currentVerse&&s.slice(start,finish).some(status=>status!=="ok")&&verseIsRepeatedCorrectly(start,finish,rw,okT)){
-
-   for(let k=start;k<finish;k++){s[k]="ok";h[k]=words[k].n}
-
+ const currentVerse = basePos < words.length ? words[basePos].v : Infinity;
+ for (let start = 0; start < end;) {
+  const verse = words[start].v;
+  let finish = start + 1;
+  while (finish < end && words[finish].v === verse) finish++;
+  if (verse < currentVerse && s.slice(start, finish).some(status => status !== "ok") && verseIsRepeatedCorrectly(start, finish, rw, okT)) {
+   for (let k = start; k < finish; k++) { s[k] = "ok"; h[k] = words[k].n; }
   }
-
-  start=finish;
-
+  start = finish;
  }
-
- while(p<end&&s[p]==="ok")p++;
-
- let sc=0;s.forEach((x,k)=>{if(k>=basePos&&k<p)sc+=x==="ok"?1:x==="near"?.5:-.3});
-
- return{s,p,h,sc};
-
+ while (p < end && s[p] === "ok") p++;
+ let sc = 0; 
+ s.forEach((x, k) => { 
+  if (k >= basePos && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.1; 
+ });
+ return { s, p, h, sc };
 }
 
-function alignBest(cands){let b=null;for(const rw of cands){const r=trial(rw);if(!b||r.sc>b.sc)b=r}if(b){st=b.s;pos=b.p;hd=b.h}render()}
+function alignBest(cands) {
+ let b = null;
+ for (const rw of cands) {
+  const r = trial(rw);
+  if (!b || r.sc > b.sc) b = r;
+ }
+ if (b) { st = b.s; pos = b.p; hd = b.h; }
+ render();
+}
 
-function htmlOf(i){const w=words[i];if($("tjw").checked){const nx=words[i+1]&&words[i+1].v===w.v?words[i+1].t:"";return tj(w.t,nx)}return w.t}
+function htmlOf(i) {
+ const w = words[i];
+ if ($("tjw").checked) {
+  const nx = words[i + 1] && words[i + 1].v === w.v ? words[i + 1].t : "";
+  return tj(w.t, nx);
+ }
+ return w.t;
+}
 
-const fl=t=>((t.match(/[\u0621-\u064A\u0671][^\u0621-\u064A\u0671]*/)||[t])[0])+"…";
-
-$("mMask").onchange=render; 
+const fl = t => ((t.match(/[\u0621-\u064A\u0671][^\u0621-\u064A\u0671]*/)||[t])[0])+"…";
+$("mMask").onchange = render;
