@@ -23,28 +23,31 @@ function isMuq(j) {
   return !!w && MUQ_SURAHS.has(s) && MUQATTAAH_SET.has(w.n) && (w.v === 0 || (s === 42 && w.v === 1));
 }
  
+// Madd (elongation): "لااااام" / "ميييييم" are the same letters stretched, so repeated letters are collapsed
+const sq = t => t.replace(/(.)\1+/g, "$1");
+ 
 // Letter names the recognizer might write slightly differently (لآم، لا ...) are accepted,
 // but never the name of a DIFFERENT letter (كاف is not قاف, ميم is not لام).
-const ALL_NAMES = new Set(Object.values(LETTER_NAMES).flat().filter(x => x.length > 1));
+const ALL_NAMES = new Set(Object.values(LETTER_NAMES).flat().filter(x => x.length > 1).map(sq));
 const nameOK = (tok, names) => names.includes(tok) ||
   (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 3 && tok.length >= 2 && sim(tok, nm) >= .67));
  
 // Returns how many recognized tokens (starting at i) fully match the Muqatta'ah word, or 0.
 // Accepts: the written form ("الم"), ALL the letter names in order ("الف لام ميم"),
-// or names glued together by the recognizer ("الفلام ميم").
+// or names glued together / stretched with madd ("الفلااااام ميييم", "الفلاميم").
 // A partial reading ("الف" only, or "الف لام") returns 0  ->  not accepted, no advancing.
 function muqMatch(rw, i, n) {
-  if (rw[i] === n) return 1;
+  if (sq(rw[i]) === sq(n)) return 1;
   const L = [...n];
   let k = i, ok = true;
   for (const ch of L) {
-    const names = LETTER_NAMES[ch] || [ch];
-    if (k < rw.length && nameOK(rw[k], names)) k++; else { ok = false; break; }
+    const names = (LETTER_NAMES[ch] || [ch]).map(sq);
+    if (k < rw.length && nameOK(sq(rw[k]), names)) k++; else { ok = false; break; }
   }
   if (ok) return k - i;
-  const full = L.map(ch => (LETTER_NAMES[ch] || [ch])[0]).join("");
-  for (let m = 1; m <= Math.min(L.length, rw.length - i); m++) {
-    const joined = rw.slice(i, i + m).join("");
+  const full = sq(L.map(ch => (LETTER_NAMES[ch] || [ch])[0]).join(""));
+  for (let m = 1; m <= Math.min(L.length + 2, rw.length - i); m++) {
+    const joined = sq(rw.slice(i, i + m).join(""));
     if (joined.length >= full.length * .7 && sim(joined, full) >= .85) return m;
   }
   return 0;
@@ -79,7 +82,8 @@ function enhancedSim(w1, w2) {
   // The text uses a "dagger alef"/hamza spelling that the speech engine writes differently
   // (الكتٰب vs الكتاب, القرءان vs القران), so also compare without alef/hamza.
   const strip = x => x.replace(/[ا\u0621]/g, "");
-  return Math.max(sim(w1, w2), sim(a, b), 0.98 * sim(strip(a), strip(b)));
+  const stretch = x => x.replace(/([اوي])\1+/g, "$1");   // madd: رحيييم، الرحمااان
+  return Math.max(sim(w1, w2), sim(a, b), 0.99 * sim(stretch(a), stretch(b)), 0.98 * sim(strip(stretch(a)), strip(stretch(b))));
 }
  
 // ---------- Re-reciting an earlier verse completely ----------
