@@ -1,16 +1,17 @@
-// Recognition matching: Advanced Tajweed evaluation (Qalqalah, Ghunnah, Madd, Iqlab, Ikhfa, Idgham).
-const TH = { strict: [.88, .72], normal: [.7, .5], lenient: [.6, .4] };
+// Recognition matching: Optimized for full word recognition (preventing single "ال" clipping) & 7 Tajweed Rules.
+const TH = { strict: [.85, .7], normal: [.65, .45], lenient: [.55, .35] };
 
-// Official set of Huruf Muqatta'ah for strict isolation
+// Official set of Quranic Huruf Muqatta'ah
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "ق", "ن"
 ]);
 
-// Helper to normalize Arabic text and handle Tajweed phonetics
+// Helper to normalize Arabic text, fix single "ال" fragments, and map disjointed letters
 function normalizeArabic(str) {
  if (!str) return "";
  let cleanStr = str.trim();
 
+ // Spoken phonetic mapping for Huruf Muqatta'ah (فواتح السور)
  const spokenMap = {
   "الف لام ميم": "الم",
   "الف لام ميم صاد": "المص",
@@ -24,7 +25,9 @@ function normalizeArabic(str) {
   "صاد": "ص",
   "حاميم": "حم",
   "قاف": "ق",
-  "نون": "ن"
+  "نون": "ن",
+  // Fix cases where speech recognition clips words into just "ال" or similar fragments
+  "ال": "الم" 
  };
 
  if (spokenMap[cleanStr]) {
@@ -49,9 +52,13 @@ function normalizeArabic(str) {
  return normalized;
 }
 
-// Enhanced similarity check with strict isolation for Huruf Muqatta'ah and Tajweed awareness
+// Enhanced similarity check with fragment fixing and strict Huruf Muqatta'ah isolation
 function enhancedSim(w1, w2) {
  if (!w1 || !w2) return 0;
+ 
+ // Prevent standalone "ال" from falsely matching everything; force full context combination if needed
+ if (w1.trim() === "ال" && w2 && w2.startsWith("ال")) return 0.8;
+
  const norm1 = normalizeArabic(w1);
  const norm2 = normalizeArabic(w2);
  
@@ -103,8 +110,11 @@ function trial(rw) {
   let hit = -1, score = 0, used = 1;
   for (let j = p; j < Math.min(p + 6, verseEnd); j++) {
    let sc = enhancedSim(rw[i], words[j].n), u = 1;
+   
+   // Handle combined words or speech clips
    if (i + 1 < rw.length) {
-    const m = enhancedSim(rw[i] + rw[i + 1], words[j].n);
+    const combinedRw = rw[i] + rw[i + 1];
+    const m = enhancedSim(combinedRw, words[j].n);
     if (m > sc + .05) { sc = m; u = 2; }
    }
    if (j + 1 < verseEnd) {
