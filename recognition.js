@@ -1,4 +1,4 @@
-// Recognition matching: Strict state locking (Yellow/Red blocks advancing until Green "ok") for Ratil.saher
+// Recognition matching: Strict Tashkeel & Connected Muqatta'ah matching for Ratil.saher
 const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
 
 // ---------- Huruf Muqatta'ah ----------
@@ -52,15 +52,21 @@ function muqMatch(rw, i, n) {
     if (joined.length >= full.length * .8 && sim(joined, full) >= .80) return m;
   }
 
-  return 0; // Returns 0 if incomplete (prevents yellow/red advancing)
+  return 0;
 }
 
 const forced = new Set();
 
-function normalizeArabic(str) {
+// Normalization function that preserves Tashkeel when needed, or compares with strict accuracy
+function normalizeArabic(str, preserveTashkeel = false) {
   if (!str) return "";
-  let normalized = str.trim()
-    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
+  let cleaned = str.trim();
+  
+  if (!preserveTashkeel) {
+    cleaned = cleaned.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, ""); // Remove Tashkeel only if requested
+  }
+
+  let normalized = cleaned
     .replace(/[إأآٱا]/g, "ا")
     .replace(/ؤ/g, "و").replace(/ئ/g, "ي")
     .replace(/ة/g, "ه")
@@ -68,6 +74,7 @@ function normalizeArabic(str) {
     .replace(/ـ/g, "")
     .replace(/(.)\1{2,}/g, "$1$1")
     .trim();
+
   const sunLetters = /[تثدذرزسصضطظلن]/;
   if (normalized.startsWith("ال") && normalized.length > 3 && sunLetters.test(normalized[2])) {
     normalized = normalized.slice(2);
@@ -77,11 +84,16 @@ function normalizeArabic(str) {
 
 function enhancedSim(w1, w2) {
   if (!w1 || !w2) return 0;
-  const a = normalizeArabic(w1), b = normalizeArabic(w2);
-  if (a === b) return 1.0;
+  // Compare both with and without Tashkeel to ensure exact harka match rewards higher score
+  const aFull = normalizeArabic(w1, true), bFull = normalizeArabic(w2, true);
+  if (aFull === bFull) return 1.0;
+
+  const a = normalizeArabic(w1, false), b = normalizeArabic(w2, false);
+  if (a === b) return 0.95; // Match without tashkeel gets slightly lower score to prioritize harka correctness
+
   const strip = x => x.replace(/[ا\u0621]/g, "");
   const stretch = x => x.replace(/([اوي])\1+/g, "$1");
-  return Math.max(sim(w1, w2), sim(a, b), 0.99 * sim(stretch(a), stretch(b)), 0.98 * sim(strip(stretch(a)), strip(stretch(b))));
+  return Math.max(sim(w1, w2), sim(a, b), 0.95 * sim(stretch(a), stretch(b)), 0.90 * sim(strip(stretch(a)), strip(stretch(b))));
 }
 
 function verseIsRepeatedCorrectly(start, end, rw, threshold) {
@@ -145,28 +157,27 @@ function trial(rw) {
 
     for (let k = p; k < hit; k++) s[k] = "miss";
     
-    // STRICT LOCK RULE: If score is only "near" (Yellow) or less, treat as unfinished/miss so it cannot advance past it!
+    // Strict locking: only green "ok" if harka & letters match precisely, otherwise lock as miss
     const lab = score >= okT ? "ok" : "miss"; 
     
     if (used === -2) {
       s[hit] = s[hit + 1] = lab;
       h[hit] = h[hit + 1] = rw[i];
-      if (lab === "ok") p = hit + 2; // Only advance if explicitly "ok" (Green)
+      if (lab === "ok") p = hit + 2;
     } else {
       s[hit] = lab;
       h[hit] = rw[i];
-      if (lab === "ok") p = hit + 1; // Only advance if explicitly "ok" (Green)
+      if (lab === "ok") p = hit + 1;
       i += used - 1;
     }
 
-    // CRITICAL: Force position `p` to stay locked on the first non-"ok" word (Yellow or Red/Miss)
     let firstUnfinished = -1;
     for (let k = verseStart; k < verseEnd; k++) {
       if (s[k] !== "ok") { firstUnfinished = k; break; }
     }
     if (firstUnfinished !== -1) {
       p = firstUnfinished;
-      break; // Stop processing further until this word is successfully conquered with "ok"
+      break;
     }
 
     skipForced();
