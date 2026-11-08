@@ -1,4 +1,4 @@
-// Recognition matching: Tarteel-style strict connected Huruf Muqatta'ah matcher for Ratil.saher
+// Recognition matching: Strict state locking (Yellow/Red blocks advancing until Green "ok") for Ratil.saher
 const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
 
 // ---------- Huruf Muqatta'ah ----------
@@ -25,16 +25,14 @@ const ALL_NAMES = new Set(Object.values(LETTER_NAMES).flat().filter(x => x.lengt
 const nameOK = (tok, names) => names.includes(tok) ||
   (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 3 && tok.length >= 2 && sim(tok, nm) >= .65));
 
-// Tarteel-style strict connected matcher: FORBIDS single fragment advancing (e.g. "الف" alone is rejected)
+// Strict connected Muqatta'ah matcher
 function muqMatch(rw, i, n) {
   if (!rw[i]) return 0;
   const targetNorm = normalizeArabic(n);
   const inputNorm = normalizeArabic(rw[i]);
 
-  // 1. If spoken as a single connected word (e.g. "الم")
   if (inputNorm === targetNorm || sq(rw[i]) === sq(n)) return 1;
 
-  // 2. If spoken as individual letter names (e.g. "الف لام ميم") - MUST complete ALL letters of the word
   const L = [...n];
   let k = i, ok = true;
   for (const ch of L) {
@@ -46,19 +44,15 @@ function muqMatch(rw, i, n) {
       break;
     }
   }
-  
-  // If user only said "الف" (partial match), 'ok' will be false -> returns 0 (No advancing!)
   if (ok) return k - i;
 
-  // 3. Flexible phonetic merging for browser speech fragments, but strictly requiring full length
   const full = sq(L.map(ch => (LETTER_NAMES[ch] || [ch])[0]).join(""));
   for (let m = 1; m <= Math.min(L.length + 2, rw.length - i); m++) {
     const joined = sq(rw.slice(i, i + m).join(""));
-    // Ensure it's not just a tiny fragment like "الف"
     if (joined.length >= full.length * .8 && sim(joined, full) >= .80) return m;
   }
 
-  return 0; // If incomplete, returns 0 so it stays locked on the Muqatta'ah word until fully recited
+  return 0; // Returns 0 if incomplete (prevents yellow/red advancing)
 }
 
 const forced = new Set();
@@ -150,40 +144,32 @@ function trial(rw) {
     if (hit < 0) continue;
 
     for (let k = p; k < hit; k++) s[k] = "miss";
-    const lab = score >= okT ? "ok" : "near";
+    
+    // STRICT LOCK RULE: If score is only "near" (Yellow) or less, treat as unfinished/miss so it cannot advance past it!
+    const lab = score >= okT ? "ok" : "miss"; 
+    
     if (used === -2) {
       s[hit] = s[hit + 1] = lab;
       h[hit] = h[hit + 1] = rw[i];
-      p = hit + 2;
+      if (lab === "ok") p = hit + 2; // Only advance if explicitly "ok" (Green)
     } else {
       s[hit] = lab;
       h[hit] = rw[i];
-      p = hit + 1;
+      if (lab === "ok") p = hit + 1; // Only advance if explicitly "ok" (Green)
       i += used - 1;
     }
 
-    if (p >= verseEnd) {
-      let firstUnfinished = -1;
-      for (let k = verseStart; k < verseEnd; k++) {
-        if (s[k] === "miss" || s[k] === "todo") { firstUnfinished = k; break; }
-      }
-      if (firstUnfinished !== -1) p = firstUnfinished;
+    // CRITICAL: Force position `p` to stay locked on the first non-"ok" word (Yellow or Red/Miss)
+    let firstUnfinished = -1;
+    for (let k = verseStart; k < verseEnd; k++) {
+      if (s[k] !== "ok") { firstUnfinished = k; break; }
     }
-    skipForced();
-  }
+    if (firstUnfinished !== -1) {
+      p = firstUnfinished;
+      break; // Stop processing further until this word is successfully conquered with "ok"
+    }
 
-  if (!memOn) {
-    const currentVerse = basePos < words.length ? words[basePos].v : Infinity;
-    for (let start = 0; start < end;) {
-      const verse = words[start].v;
-      let finish = start + 1;
-      while (finish < end && words[finish].v === verse) finish++;
-      if (verse < currentVerse && s.slice(start, finish).some(x => x !== "ok") &&
-          verseIsRepeatedCorrectly(start, finish, rw, okT)) {
-        for (let k = start; k < finish; k++) { s[k] = "ok"; h[k] = words[k].n; }
-      }
-      start = finish;
-    }
+    skipForced();
   }
 
   while (p < end && s[p] === "ok") p++;
