@@ -1,41 +1,15 @@
-// Recognition matching: Robust handler for Huruf Muqatta'ah & Continuous Tajweed rules for Ratil.saher
-const TH = { strict: [.80, .65], normal: [.55, .35], lenient: [.40, .20] };
+// Recognition matching: Strict letter completeness & no premature advancing for Ratil.saher
+const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
 
 // Official set of Quranic Huruf Muqatta'ah
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "ق", "ن"
 ]);
 
-// Helper to normalize Arabic text and handle speech recognition gaps
+// Helper to normalize Arabic text strictly
 function normalizeArabic(str) {
  if (!str) return "";
  let cleanStr = str.trim();
-
- // Expand common speech recognition failures or fragmented letters
- const spokenMap = {
-  "الف لام ميم": "الم",
-  "الف لام": "الم",
-  "الف": "الم",
-  "لام": "الم",
-  "ميم": "الم",
-  "ال": "الم", // إذا سمع المتصفح "ال" فقط، نقوم بتحويلها تلقائياً لتسهيل المرور
-  "الف لام ميم صاد": "المص",
-  "الف لام راء": "الر",
-  "الف لام ميم راء": "المر",
-  "كاف هاء يا عين صاد": "كهيعص",
-  "طاها": "طه",
-  "طا سين ميم": "طسم",
-  "طا سين": "طس",
-  "يس": "يس",
-  "صاد": "ص",
-  "حاميم": "حم",
-  "قاف": "ق",
-  "نون": "ن"
- };
-
- if (spokenMap[cleanStr]) {
-  cleanStr = spokenMap[cleanStr];
- }
 
  let normalized = cleanStr
   .replace(/[\u064B-\u065F\u0670]/g, "") // Remove Tashkeel & Tanween
@@ -54,7 +28,7 @@ function normalizeArabic(str) {
  return normalized;
 }
 
-// Enhanced similarity check with maximum tolerance for Muqatta'ah
+// Strict similarity check: Forbids partial matches on Muqatta'ah letters
 function enhancedSim(w1, w2) {
  if (!w1 || !w2) return 0;
  
@@ -66,12 +40,9 @@ function enhancedSim(w1, w2) {
  const isM1 = MUQATTAAH_SET.has(norm1) || MUQATTAAH_SET.has(w1.trim());
  const isM2 = MUQATTAAH_SET.has(norm2) || MUQATTAAH_SET.has(w2.trim());
 
+ // If either word is a disjointed letter (مثل الم)، ممنوع منعاً باتاً القبول بأقل من المطابقة التامة
  if (isM1 || isM2) {
-  // Allow flexible match if user speaks parts or if browser clips the letters
-  if ((norm1 === "الم" || norm2 === "الم") && (norm1.includes("ال") || norm2.includes("ال") || norm1.includes("الف") || norm2.includes("الف") || norm1 === "" || norm2 === "")) {
-   return 0.95; 
-  }
-  return norm1 === norm2 ? 1.0 : 0.0;
+  return norm1 === norm2 ? 1.0 : 0.0; 
  }
 
  let baseScore = sim(w1, w2);
@@ -99,73 +70,60 @@ function verseIsRepeatedCorrectly(start, end, rw, threshold) {
 }
 
 function trial(rw) {
- const [okT, nearT] = TH.normal;
+ const [okT, nearT] = TH.strict;
  const s = baseSt.slice(), h = hd.slice(); let p = basePos;
  for (let k = basePos; k < h.length; k++) h[k] = "";
  const end = Math.min(lim, words.length);
  
- // Fallback feature: if the current expected word is a Muqatta'ah (like "الم") and the speech array is empty or missed it, allow auto-passing if user clicked or made any vocal sound
- if (words[p] && MUQATTAAH_SET.has(words[p].n) && (rw.length === 0 || rw.join("").trim() === "")) {
-  // Auto-accept Muqatta'ah if speech engine fails to capture it, to prevent getting stuck permanently
-  s[p] = "ok";
-  h[p] = words[p].n;
-  p++;
-  return { s, p, h, sc: 1.0 };
- }
-
  for (let i = 0; i < rw.length && p < end; i++) {
   const verse = words[p].v;
   let verseStart = p, verseEnd = p + 1;
   while (verseStart > 0 && words[verseStart - 1].v === verse) verseStart--;
   while (verseEnd < end && words[verseEnd].v === verse) verseEnd++;
 
-  let currentSpoken = rw[i];
-  if (i + 2 < rw.length) {
-   currentSpoken = rw[i] + " " + rw[i+1] + " " + rw[i+2];
-  } else if (i + 1 < rw.length) {
-   currentSpoken = rw[i] + " " + rw[i+1];
-  }
-
   let hit = -1, score = 0, used = 1;
   for (let j = p; j < Math.min(p + 6, verseEnd); j++) {
-   let sc = enhancedSim(currentSpoken, words[j].n), u = 1;
-   
-   // Special handling if current expected word is Muqatta'ah
+   let sc = enhancedSim(rw[i], words[j].n), u = 1;
+
+   // إذا كانت الكلمة المتوقعة حرفاً مقطعاً (مثل الم)، يجب أن يتطابق الصوت تماماً بدون تساهل أو قفز
    if (MUQATTAAH_SET.has(words[j].n)) {
-    sc = 0.95; // Force match to ensure reciter never gets stuck on disjointed letters
+    if (normalizeArabic(rw[i]) !== normalizeArabic(words[j].n)) {
+     sc = 0.0; // رفض تام إذا لم تنطق الكلمة بالكامل
+    } else {
+     sc = 1.0;
+    }
    }
 
-   if (i + 2 < rw.length) {
-    const triple = rw[i] + rw[i+1] + rw[i+2];
-    const m = enhancedSim(triple, words[j].n);
-    if (m > sc) { sc = m; u = 3; }
-   } else if (i + 1 < rw.length) {
-    const double = rw[i] + rw[i+1];
-    const m = enhancedSim(double, words[j].n);
-    if (m > sc) { sc = m; u = 2; }
+   if (i + 1 < rw.length) {
+    const combinedRw = rw[i] + rw[i + 1];
+    const m = enhancedSim(combinedRw, words[j].n);
+    if (m > sc + .05 && !MUQATTAAH_SET.has(words[j].n)) { sc = m; u = 2; }
+   }
+   if (j + 1 < verseEnd) {
+    const m = enhancedSim(rw[i], words[j].n + words[j + 1].n);
+    if (m >= .80 && m > sc) { sc = m; u = -2; }
    }
 
-   if (sc >= nearT && sc > score + (j > p ? .05 : 0)) {
+   if (sc >= okT && sc > score + (j > p ? .05 : 0)) {
     hit = j; score = sc; used = u;
-    if (sc >= 0.75) break;
+    if (sc >= 0.99) break;
    }
   }
   
-  if (hit < 0) {
-   // If we are stuck on a Muqatta'ah word, force hit it to let reciter proceed
-   if (MUQATTAAH_SET.has(words[p].n)) {
-    hit = p; score = 1.0; used = 1;
-   } else {
-    continue;
-   }
-  }
-
+  if (hit < 0) continue;
   for (let k = p; k < hit; k++) s[k] = "miss";
   const lab = score >= okT ? "ok" : "near";
   
-  s[hit] = lab;
-  h[hit] = rw[i] || words[hit].n;
-  p = hit + 1;
+  if (used === -2) {
+   s[hit] + s[hit + 1] = lab;
+   h[hit] = h[hit + 1] = rw[i];
+   p = hit + 2;
+  } else {
+   s[hit] = lab;
+   h[hit] = rw[i];
+   p = hit + 1;
+   if (used === 2) i++;
+  }
 
   if (p >= verseEnd) {
    const firstUnfinished = s.findIndex((status, index) => index >= verseStart && index < verseEnd && status !== "ok");
@@ -187,7 +145,7 @@ function trial(rw) {
  while (p < end && s[p] === "ok") p++;
  let sc = 0; 
  s.forEach((x, k) => { 
-  if (k >= basePos && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.1; 
+  if (k >= basePos && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.2; 
  });
  return { s, p, h, sc };
 }
