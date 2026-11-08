@@ -1,17 +1,16 @@
-// Recognition matching: Optimized for full word recognition (preventing single "ال" clipping) & 7 Tajweed Rules.
-const TH = { strict: [.85, .7], normal: [.65, .45], lenient: [.55, .35] };
+// Recognition matching: Strict letter-by-letter completion check for Ratil.saher
+const TH = { strict: [.90, .78], normal: [.75, .55], lenient: [.65, .45] };
 
 // Official set of Quranic Huruf Muqatta'ah
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "ق", "ن"
 ]);
 
-// Helper to normalize Arabic text, fix single "ال" fragments, and map disjointed letters
+// Helper to normalize Arabic text
 function normalizeArabic(str) {
  if (!str) return "";
  let cleanStr = str.trim();
 
- // Spoken phonetic mapping for Huruf Muqatta'ah (فواتح السور)
  const spokenMap = {
   "الف لام ميم": "الم",
   "الف لام ميم صاد": "المص",
@@ -25,9 +24,7 @@ function normalizeArabic(str) {
   "صاد": "ص",
   "حاميم": "حم",
   "قاف": "ق",
-  "نون": "ن",
-  // Fix cases where speech recognition clips words into just "ال" or similar fragments
-  "ال": "الم" 
+  "نون": "ن"
  };
 
  if (spokenMap[cleanStr]) {
@@ -43,7 +40,6 @@ function normalizeArabic(str) {
   .replace(/(.)\1{2,}/g, "$1$1")          // Handle Madd elongation
   .trim();
 
- // Handle Lam Shamsiyyah
  const sunLetters = /[تثدذرزسصضطظلن]/;
  if (normalized.startsWith("ال") && normalized.length > 3 && sunLetters.test(normalized[2])) {
   normalized = normalized.slice(2);
@@ -52,23 +48,26 @@ function normalizeArabic(str) {
  return normalized;
 }
 
-// Enhanced similarity check with fragment fixing and strict Huruf Muqatta'ah isolation
+// Strict similarity check ensuring all letters must match completely (no shortcuts)
 function enhancedSim(w1, w2) {
  if (!w1 || !w2) return 0;
  
- // Prevent standalone "ال" from falsely matching everything; force full context combination if needed
- if (w1.trim() === "ال" && w2 && w2.startsWith("ال")) return 0.8;
-
  const norm1 = normalizeArabic(w1);
  const norm2 = normalizeArabic(w2);
  
  if (norm1 === norm2) return 1.0;
 
+ // Strict check for Huruf Muqatta'ah: Must spell out and match all letters completely
  const isM1 = MUQATTAAH_SET.has(norm1) || MUQATTAAH_SET.has(w1.trim());
  const isM2 = MUQATTAAH_SET.has(norm2) || MUQATTAAH_SET.has(w2.trim());
 
  if (isM1 || isM2) {
   return norm1 === norm2 ? 1.0 : 0.0;
+ }
+
+ // If reciting a full word like "الم", do not accept if only "ال" was spoken
+ if ((w1 === "الم" || w2 === "الم") && (norm1 === "ال" || norm2 === "ال")) {
+  return 0.4; // Low score, forces user to complete pronouncing the full word "ميم"
  }
 
  let baseScore = sim(w1, w2);
@@ -96,7 +95,7 @@ function verseIsRepeatedCorrectly(start, end, rw, threshold) {
 }
 
 function trial(rw) {
- const [okT, nearT] = TH.normal;
+ const [okT, nearT] = TH.strict; // Use strict threshold to ensure complete recitation
  const s = baseSt.slice(), h = hd.slice(); let p = basePos;
  for (let k = basePos; k < h.length; k++) h[k] = "";
  const end = Math.min(lim, words.length);
@@ -111,24 +110,25 @@ function trial(rw) {
   for (let j = p; j < Math.min(p + 6, verseEnd); j++) {
    let sc = enhancedSim(rw[i], words[j].n), u = 1;
    
-   // Handle combined words or speech clips
    if (i + 1 < rw.length) {
-    const combinedRw = rw[i] + rw[i + 1];
+    const combinedRw = rw[i] + " " + rw[i + 1];
     const m = enhancedSim(combinedRw, words[j].n);
     if (m > sc + .05) { sc = m; u = 2; }
    }
    if (j + 1 < verseEnd) {
     const m = enhancedSim(rw[i], words[j].n + words[j + 1].n);
-    if (m >= .75 && m > sc) { sc = m; u = -2; }
+    if (m >= .80 && m > sc) { sc = m; u = -2; }
    }
    if (sc >= nearT && sc > score + (j > p ? .05 : 0)) {
     hit = j; score = sc; used = u;
-    if (sc >= .92) break;
+    if (sc >= 0.95) break; // Require high accuracy for letter completeness
    }
   }
+  
   if (hit < 0) continue;
   for (let k = p; k < hit; k++) s[k] = "miss";
   const lab = score >= okT ? "ok" : "near";
+  
   if (used === -2) {
    s[hit] = s[hit + 1] = lab;
    h[hit] = h[hit + 1] = rw[i];
@@ -160,7 +160,7 @@ function trial(rw) {
  while (p < end && s[p] === "ok") p++;
  let sc = 0; 
  s.forEach((x, k) => { 
-  if (k >= basePos && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.1; 
+  if (k >= basePos && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.2; 
  });
  return { s, p, h, sc };
 }
