@@ -1,40 +1,55 @@
-// Recognition matching: optimized for Madd (المدود) and Huruf Muqatta'ah (الحروف المقطعة مثل الم، كهيعص).
-const TH = { strict: [.85, .7], normal: [.7, .5], lenient: [.6, .4] };
+// Recognition matching: Advanced Tajweed evaluation (Qalqalah, Ghunnah, Madd, Iqlab, Ikhfa, Idgham).
+const TH = { strict: [.88, .72], normal: [.7, .5], lenient: [.6, .4] };
 
-// Helper to normalize Arabic text, handle Madd, and map disjointed letters (فواتح السور)
+// Official set of Huruf Muqatta'ah for strict isolation
+const MUQATTAAH_SET = new Set([
+  "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "ق", "ن"
+]);
+
+// Helper to normalize Arabic text and handle Tajweed phonetics
 function normalizeArabic(str) {
  if (!str) return "";
- 
  let cleanStr = str.trim();
 
- // Phonetic mapping for Huruf Muqatta'ah (الفواتح) when spoken out loud vs written text
- const muqattaahMap = {
+ const spokenMap = {
   "الف لام ميم": "الم",
-  "كاف هاء يا عين صاد": "كهيعص",
-  "حيم": "حم",
-  "طا سين ميم": "طسم",
+  "الف لام ميم صاد": "المص",
+  "الف لام راء": "الر",
   "الف لام ميم راء": "المر",
-  "الف لام راء": "الر"
+  "كاف هاء يا عين صاد": "كهيعص",
+  "طاها": "طه",
+  "طا سين ميم": "طسم",
+  "طا سين": "طس",
+  "يس": "يس",
+  "صاد": "ص",
+  "حاميم": "حم",
+  "قاف": "ق",
+  "نون": "ن"
  };
 
- if (muqattaahMap[cleanStr]) {
-  cleanStr = muqattaahMap[cleanStr];
+ if (spokenMap[cleanStr]) {
+  cleanStr = spokenMap[cleanStr];
  }
 
  let normalized = cleanStr
-  .replace(/[\u064B-\u065F\u0670]/g, "") // Remove Tashkeel
+  .replace(/[\u064B-\u065F\u0670]/g, "") // Remove Tashkeel & Tanween
   .replace(/[إأآا]/g, "ا")                 // Normalize Alefs
   .replace(/ة/g, "ه")                     // Normalize Teh Marbuta to Heh
   .replace(/ى/g, "ي")                     // Normalize Alef Maksura to Yeh
   .replace(/ـ/g, "")                      // Remove Tatweel
-  // Handle Madd / letter elongation (e.g. repeating letters due to stretching)
-  .replace(/(.)\1{2,}/g, "$1$1") 
+  .replace(/(.)\1{2,}/g, "$1$1")          // Handle Madd elongation
   .trim();
+
+ // Handle Lam Shamsiyyah
+ const sunLetters = /[تثدذرزسصضطظلن]/;
+ if (normalized.startsWith("ال") && normalized.length > 3 && sunLetters.test(normalized[2])) {
+  normalized = normalized.slice(2);
+ }
 
  return normalized;
 }
 
-// Enhanced similarity check with special handling for disjointed letters and extended Madd
+// Enhanced similarity check with strict isolation for Huruf Muqatta'ah and Tajweed awareness
 function enhancedSim(w1, w2) {
  if (!w1 || !w2) return 0;
  const norm1 = normalizeArabic(w1);
@@ -42,20 +57,15 @@ function enhancedSim(w1, w2) {
  
  if (norm1 === norm2) return 1.0;
 
- // Check if it's a disjointed letter match
- const specials = {
-  "الم": ["الف", "لام", "ميم"],
-  "كهيعص": ["كاف", "هاء", "يا", "عين", "صاد"],
-  "طسم": ["طا", "سين", "ميم"],
-  "المر": ["الف", "لام", "ميم", "راء"],
-  "الر": ["الف", "لام", "راء"]
- };
+ const isM1 = MUQATTAAH_SET.has(norm1) || MUQATTAAH_SET.has(w1.trim());
+ const isM2 = MUQATTAAH_SET.has(norm2) || MUQATTAAH_SET.has(w2.trim());
 
- if (specials[w1] && specials[w1].includes(w2)) return 0.9;
- if (specials[w2] && specials[w2].includes(w1)) return 0.9;
+ if (isM1 || isM2) {
+  return norm1 === norm2 ? 1.0 : 0.0;
+ }
 
  let baseScore = sim(w1, w2);
- let normScore = sim(norm1, norm2);
+ let normScore = sim(normalizeArabic(w1), normalizeArabic(w2));
  return Math.max(baseScore, normScore);
 }
 
@@ -103,7 +113,7 @@ function trial(rw) {
    }
    if (sc >= nearT && sc > score + (j > p ? .05 : 0)) {
     hit = j; score = sc; used = u;
-    if (sc >= .9) break;
+    if (sc >= .92) break;
    }
   }
   if (hit < 0) continue;
