@@ -202,10 +202,7 @@ function alignBest(cands) {
   }
   if (b) { st = b.s; pos = b.p; hd = b.h; }
   render();
-  if (listening && pos < words.length && isMuq(pos) && st[pos] !== "ok") {
-    const spoken = [...words[pos].n].map(c => (LETTER_NAMES[c] || [c])[0]).join(" · ");
-    msg("🔤 حروف مقطعة: انطقها بأسماء حروفها (" + spoken + ") أو كما تُكتب · Say the letter names");
-  }
+  if (listening && pos < words.length && isMuq(pos) && st[pos] !== "ok") msg("🔤 حروف مقطعة: انطقها بأسماء حروفها (" + [...words[pos].n].map(c => (LETTER_NAMES[c] || [c])[0]).join(" · ") + ") أو كما تُكتب · Say the letter names");
 }
  
 function htmlOf(i) {
