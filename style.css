@@ -23,7 +23,15 @@ label.tg{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--mute
 .w.cur{background:var(--cur)}
 
 /* وضع إخفاء الآيات للقراءة المستقل */
-body.reading-hide #text .w:not(.cur){filter:blur(6px);opacity:0.3}
+body.reading-hide #text .w:not(.cur) {
+  filter: blur(6px);
+  opacity: 0.3;
+  transition: filter 0.2s, opacity 0.2s;
+}
+body.reading-hide #text .w.cur {
+  filter: none;
+  opacity: 1;
+}
 
 .num{color:var(--mute);font-size:22px;padding:0 4px}
 .stats{display:flex;gap:10px;margin-top:12px}
