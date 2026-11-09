@@ -1,9 +1,9 @@
 // ============================================================================
-// Ratil.saher - Auto-Start & Smart Mic Permission Engine (Tarteel-style)
+// Ratil.saher - Smooth & Safe Mid-Surah Recognition Engine
 // ============================================================================
 
 const TH = { 
-  strict: [.70, .52], // سلاسة فائقة مطابقة لمعايير Tarteel
+  strict: [.70, .52], 
   normal: [.60, .42], 
   lenient: [.50, .32] 
 };
@@ -55,7 +55,6 @@ function muqMatch(rw, i, n) {
     const joined = sq(rw.slice(i, i + m).join(""));
     if (joined.length >= full.length * .55 && sim(joined, full) >= .62) return m;
   }
-
   return 0;
 }
 
@@ -64,23 +63,15 @@ const forced = new Set();
 function normalizeArabic(str, preserveTashkeel = false) {
   if (!str) return "";
   let cleaned = str.trim();
-  
   if (!preserveTashkeel) {
     cleaned = cleaned.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "");
   }
-
-  let normalized = cleaned
+  return cleaned
     .replace(/[إأآٱاىوؤيئ]/g, m => ({'إ':'ا','أ':'ا','آ':'ا','ٱ':'ا','ى':'ا','و':'و','ؤ':'و','ي':'ي','ئ':'ي'}[m]))
     .replace(/ة/g, "ه")
     .replace(/ـ/g, "")
     .replace(/([اوي])\1+/g, "$1")
     .trim();
-
-  const sunLetters = /[تثدذرزسصضطظلن]/;
-  if (normalized.startsWith("ال") && normalized.length > 3 && sunLetters.test(normalized[2])) {
-    normalized = normalized.slice(2);
-  }
-  return normalized;
 }
 
 function enhancedSim(w1, w2) {
@@ -94,33 +85,26 @@ function enhancedSim(w1, w2) {
   const strip = x => x.replace(/[ا\u0621]/g, "");
   const stretch = x => x.replace(/([اوي])+/g, "$1");
   
-  return Math.max(
-    sim(w1, w2), 
-    sim(a, b), 
-    0.88 * sim(stretch(a), stretch(b)), 
-    0.82 * sim(strip(stretch(a)), stretch(b))
-  );
+  return Math.max(sim(w1, w2), sim(a, b), 0.88 * sim(stretch(a), stretch(b)), 0.82 * sim(strip(stretch(a)), stretch(b)));
 }
 
 function trial(rw) {
   const [okT, nearT] = TH.strict;
   const s = baseSt.slice(), h = hd.slice(); 
-  let p = typeof basePos !== 'undefined' ? basePos : 0;
+  
+  // نقطة البداية الفعالة (البدء من المنتصف بسلاسة)
+  const startPoint = typeof basePos !== 'undefined' ? basePos : 0;
+  let p = startPoint;
 
-  for (let k = p; k < h.length; k++) h[k] = "";
+  for (let k = startPoint; k < h.length; k++) h[k] = "";
   const end = Math.min(typeof lim !== 'undefined' ? lim : words.length, words.length);
   
   const skipForced = () => { while (p < end && forced.has(p)) { s[p] = "ok"; h[p] = h[p] || "✓"; p++; } };
   skipForced();
 
   for (let i = 0; i < rw.length && p < end; i++) {
-    const verse = words[p].v;
-    let verseStart = p, verseEnd = p + 1;
-    while (verseStart > 0 && words[verseStart - 1].v === verse) verseStart--;
-    while (verseEnd < end && words[verseEnd].v === verse) verseEnd++;
-
     let hit = -1, score = 0, used = 1;
-    for (let j = p; j < Math.min(p + 6, verseEnd); j++) {
+    for (let j = p; j < Math.min(p + 5, end); j++) {
       let sc = 0, u = 1;
       if (isMuq(j)) {
         const n = muqMatch(rw, i, words[j].n);
@@ -131,52 +115,31 @@ function trial(rw) {
           const m = enhancedSim(rw[i] + rw[i + 1], words[j].n);
           if (m > sc + .03) { sc = m; u = 2; }
         }
-        if (j + 1 < verseEnd && !isMuq(j + 1)) {
-          const m = enhancedSim(rw[i], words[j].n + words[j + 1].n);
-          if (m >= .62 && m > sc) { sc = m; u = -2; }
-        }
       }
-      if (sc >= nearT && sc > score + (j > p ? .03 : 0)) {
+      if (sc >= nearT && sc > score) {
         hit = j; score = sc; used = u;
         if (sc >= 0.90) break;
       }
     }
     if (hit < 0) continue;
 
+    // حماية الكلمات السابقة لنقطة البداية (تظل نظيفة بدون لون أحمر)
     for (let k = p; k < hit; k++) {
-      if (k >= (typeof basePos !== 'undefined' ? basePos : 0)) {
-        s[k] = "miss";
-      }
+      if (k >= startPoint) s[k] = "miss";
     }
     
     const lab = score >= okT ? "ok" : "miss"; 
-    
-    if (used === -2) {
-      s[hit] = s[hit + 1] = lab;
-      h[hit] = h[hit + 1] = rw[i];
-      if (lab === "ok") p = hit + 2;
-    } else {
-      s[hit] = lab;
-      h[hit] = rw[i];
-      if (lab === "ok") p = hit + 1;
-      i += used - 1;
-    }
-
-    let firstUnfinished = -1;
-    for (let k = verseStart; k < verseEnd; k++) {
-      if (s[k] !== "ok") { firstUnfinished = k; break; }
-    }
-    if (firstUnfinished !== -1) {
-      p = firstUnfinished;
-      break;
-    }
+    s[hit] = lab;
+    h[hit] = rw[i];
+    if (lab === "ok") p = hit + 1;
+    i += used - 1;
 
     skipForced();
   }
 
   while (p < end && s[p] === "ok") p++;
   let sc = 0;
-  s.forEach((x, k) => { if (k >= (typeof basePos !== 'undefined' ? basePos : 0) && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.2; });
+  s.forEach((x, k) => { if (k >= startPoint && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.2; });
   return { s, p, h, sc };
 }
 
@@ -190,17 +153,12 @@ function alignBest(cands) {
   render();
 }
 
-// ============================================================================
-// التشغيل التلقائي وطلب إذن الميكروفون فور فتح الموقع (بدون زر Start)
-// ============================================================================
+// التشغيل التلقائي المباشر للميكروفون
 let internalRecognizer = null;
 
 function requestMicAndStartAI() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    console.warn("المتصفح لا يدعم التعرف الصوتي المباشر.");
-    return;
-  }
+  if (!SpeechRecognition) return;
 
   internalRecognizer = new SpeechRecognition();
   internalRecognizer.continuous = true;
@@ -216,53 +174,19 @@ function requestMicAndStartAI() {
     if (candidates.length > 0) alignBest(candidates);
   };
 
-  internalRecognizer.onerror = (err) => {
-    console.warn("إعادة محاولة الاتصال بالميكروفون...", err);
-  };
-
   internalRecognizer.onend = () => {
     if (window.isListeningActive) {
-      try {
-        internalRecognizer.start();
-      } catch (e) {}
+      try { internalRecognizer.start(); } catch (e) {}
     }
   };
 
   window.isListeningActive = true;
   
-  // طلب الميكروفون والبدء الفوري
   navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(() => {
-      internalRecognizer.start();
-    })
-    .catch((err) => {
-      console.error("تم رفض إذن الميكروفون من قبل المستخدم:", err);
-    });
+    .then(() => { internalRecognizer.start(); })
+    .catch((err) => { console.warn("ميكروفون:", err); });
 }
 
-// البدء التلقائي بمجرد تحميل الصفحة
 document.addEventListener("DOMContentLoaded", () => {
   requestMicAndStartAI();
 });
-
-function htmlOf(i) {
-  const w = words[i];
-  const hideCheckbox = document.getElementById("hideNormal");
-  const isNormalHide = hideCheckbox && hideCheckbox.checked;
-  
-  if (isNormalHide && st[i] !== "ok") {
-    return '<span style="filter: blur(6px); opacity: 0.15; user-select: none; background: rgba(255,255,255,0.08); border-radius: 4px; padding: 0 6px;">ُٔـ</span>';
-  }
-
-  if ($("tjw") && $("tjw").checked && typeof tj === "function") {
-    const nx = words[i + 1] && words[i + 1].v === w.v ? words[i + 1].t : "";
-    return tj(w.t, nx);
-  }
-  return w.t;
-}
-
-const fl = t => ((t.match(/[\u0621-\u064A\u0671][^\u0621-\u064A\u0671]*/) || [t])[0]) + "…";
-
-if ($("mMask")) {
-  $("mMask").onchange = render;
-}
