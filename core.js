@@ -1,5 +1,5 @@
 // ============================================================================
-// Ratil.saher - Core JavaScript (Fixed & Self-Contained Helpers)
+// Ratil.saher - Core JavaScript (Strict Sequential Recitation - No Jumping)
 // ============================================================================
 
 const $ = id => document.getElementById(id);
@@ -23,12 +23,11 @@ function sim(a, b) {
 const ad = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
 let words = [], st = [], pos = 0, baseSt = [], basePos = 0, rec = null, listening = false;
 
-// دالة إرجاع نص الكلمة لتجنب خطأ htmlOf
 function htmlOf(i) {
   return words[i] ? words[i].t : "";
 }
 
-// دالة مطابقة ومحاذاة النطق الصوتي مع الكلمات لتجنب خطأ alignBest
+// مطابقة متتابعة صارمة تبدأ حصرياً من الموضع الحالي (pos) دون قفز للأسفل أو المنتصف
 function alignBest(cands) {
   if (!words.length || !cands || !cands.length) return;
   for (const tokens of cands) {
@@ -36,17 +35,19 @@ function alignBest(cands) {
     let matched = false;
     let p = pos;
     let tIdx = 0;
+    
     while (p < words.length && tIdx < tokens.length) {
       if (sim(words[p].n, tokens[tIdx]) >= 0.65) {
         st[p] = "ok";
-        pos = Math.max(pos, p + 1);
+        pos = p + 1;
         matched = true;
         tIdx++;
-      } else if (tIdx > 0) {
-        tIdx++;
+        p++;
+      } else {
+        break; // التوقف فوراً إذا لم تتطابق الكلمة الحالية بالترتيب (منع القفز للمنتصف)
       }
-      p++;
     }
+    
     if (matched) {
       render();
       break;
@@ -97,9 +98,6 @@ function load() {
 function render() {
   let ok = 0, near = 0, miss = 0;
   
-  const hideNormalEl = $("hideNormal");
-  const isNormalHide = hideNormalEl && hideNormalEl.checked;
-
   words.forEach((w, i) => {
     const hintIdx = typeof window.hintIdx !== "undefined" ? window.hintIdx : -1;
     const memOn = typeof window.memOn !== "undefined" ? window.memOn : false;
@@ -112,8 +110,6 @@ function render() {
         w.m = mk;
         w.el.innerHTML = mk && typeof fl === "function" ? fl(w.t) : htmlOf(i);
       }
-    } else if (isNormalHide && st[i] !== "ok") {
-      w.el.innerHTML = '<span style="filter: blur(6px); opacity: 0.15; user-select: none; background: rgba(255,255,255,0.08); border-radius: 4px; padding: 0 6px;">ُٔـ</span>';
     } else {
       if (w.m) { w.m = false; }
       w.el.innerHTML = htmlOf(i);
@@ -236,30 +232,6 @@ function stop() {
   render();
   if (pos >= words.length) msg("Finished. Tap Reset to try again.");
 }
-
-// التحكم المتبادل الحصري: منع تفعيل وضع الحفظ ووضع إخفاء الكلمات العادي معاً
-document.addEventListener("DOMContentLoaded", () => {
-  const hideNormalEl = $("hideNormal");
-  const hideMemEl = $("hide");
-
-  if (hideNormalEl && hideMemEl) {
-    hideNormalEl.onchange = () => {
-      if (hideNormalEl.checked) {
-        hideMemEl.checked = false;
-        if (typeof memToggle === "function" && typeof memOn !== "undefined" && memOn) memToggle();
-      }
-      render();
-    };
-
-    hideMemEl.onchange = () => {
-      if (hideMemEl.checked) {
-        hideNormalEl.checked = false;
-      }
-      if (typeof memToggle === "function") memToggle();
-      render();
-    };
-  }
-});
 
 if ($("mic")) $("mic").onclick = () => listening ? stop() : start();
 if ($("reset")) $("reset").onclick = () => { stop(); if ($("live")) $("live").textContent = ""; load(); msg("Reset. Tap Start when ready."); };
