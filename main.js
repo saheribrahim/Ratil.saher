@@ -1,5 +1,5 @@
 // ============================================================================
-// Ratil.saher - Main JavaScript Controller (Complete Integration)
+// Ratil.saher - Main JavaScript Controller (Fully Combined & Optimized)
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -14,23 +14,41 @@ document.addEventListener("DOMContentLoaded", () => {
   adminUsersScript.defer = true;
   document.body.appendChild(adminUsersScript);
 
-  // 3. ربط قائمة اختيار السورة لتحميلها وعرض الآيات فوراً عند الاختيار
+  // 3. إدارة واختيار السور (ربط القائمة والتحميل التلقائي)
   const surahSelect = document.getElementById("surah");
+  
   if (surahSelect) {
     surahSelect.addEventListener("change", (e) => {
-      const selectedSurah = e.target.value;
+      const surahIndex = e.target.value;
+      
       if (typeof loadSurah === "function") {
-        loadSurah(selectedSurah);
+        loadSurah(surahIndex);
+      } else if (typeof selectSurah === "function") {
+        selectSurah(surahIndex);
       } else if (typeof render === "function") {
         render();
       }
     });
   }
 
-  // تحميل سورة الفاتحة افتراضياً عند البدء إذا لم تكن محملة
-  if (typeof loadSurah === "function" && surahSelect && !surahSelect.value) {
-    loadSurah(1);
-  }
+  // التحقق من تعبئة قائمة السور أو تحميل الفاتحة افتراضياً
+  setTimeout(() => {
+    if (surahSelect && surahSelect.options.length === 0) {
+      if (typeof surahs !== "undefined" && Array.isArray(surahs)) {
+        surahs.forEach((s, idx) => {
+          const opt = document.createElement("option");
+          opt.value = idx + 1;
+          opt.textContent = s.name || `سورة ${idx + 1}`;
+          surahSelect.appendChild(opt);
+        });
+      }
+    }
+    
+    // تحميل السورة الأولى تلقائياً عند البدء إذا لم تُختار سورة بعد
+    if (surahSelect && !surahSelect.value && typeof loadSurah === "function") {
+      loadSurah(1);
+    }
+  }, 200);
 
   // 4. تفعيل زر Reset وإعادة ضبط التلاوة
   const resetBtn = document.getElementById("reset");
