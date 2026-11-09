@@ -1,7 +1,6 @@
-// Recognition matching: Strict Tashkeel, State Locking, Connected Muqatta'ah & Normal Hide Mode for Ratil.saher
+// Recognition matching: Tarteel-style strict Tashkeel, State Locking & Connected Muqatta'ah Engine for Ratil.saher
 const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
 
-// ---------- Huruf Muqatta'ah ----------
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
 ]);
@@ -25,7 +24,6 @@ const ALL_NAMES = new Set(Object.values(LETTER_NAMES).flat().filter(x => x.lengt
 const nameOK = (tok, names) => names.includes(tok) ||
   (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 3 && tok.length >= 2 && sim(tok, nm) >= .65));
 
-// Strict connected Muqatta'ah matcher
 function muqMatch(rw, i, n) {
   if (!rw[i]) return 0;
   const targetNorm = normalizeArabic(n, false);
@@ -91,28 +89,7 @@ function enhancedSim(w1, w2) {
 
   const strip = x => x.replace(/[ا\u0621]/g, "");
   const stretch = x => x.replace(/([اوي])\1+/g, "$1");
-  return Math.max(sim(w1, w2), sim(a, b), 0.95 * sim(stretch(a), stretch(b)), 0.90 * sim(strip(stretch(a)), strip(stretch(b))));
-}
-
-function verseIsRepeatedCorrectly(start, end, rw, threshold) {
-  for (let i = 0; i < rw.length; i++) {
-    let cursor = i, matched = true;
-    for (let j = start; j < end; j++) {
-      const w = words[j];
-      if (!w.n) { matched = false; break; }
-      let best = -1, bestScore = 0, bestUsed = 1;
-      for (let q = cursor; q < Math.min(cursor + 5, rw.length); q++) {
-        let sc = 0, u = 1;
-        if (isMuq(j)) { const n = muqMatch(rw, q, w.n); if (n > 0) { sc = 1; u = n; } }
-        else sc = enhancedSim(w.n, rw[q]);
-        if (sc > bestScore) { bestScore = sc; best = q; bestUsed = u; }
-      }
-      if (best < 0 || bestScore < threshold) { matched = false; break; }
-      cursor = best + bestUsed;
-    }
-    if (matched) return true;
-  }
-  return false;
+  return Math.max(sim(w1, w2), sim(a, b), 0.95 * sim(stretch(a), stretch(b)), 0.90 * sim(strip(stretch(a)), stretch(b)));
 }
 
 function trial(rw) {
@@ -199,7 +176,6 @@ function alignBest(cands) {
 function htmlOf(i) {
   const w = words[i];
   
-  // التحقق الفعّال من زر إخفاء الكلمات العادي وإخفاء الكلمة إذا لم يتم نطقها بشكل صحيح (ok)
   const hideCheckbox = document.getElementById("hideNormal");
   const isNormalHide = hideCheckbox && hideCheckbox.checked;
   
@@ -215,16 +191,6 @@ function htmlOf(i) {
 }
 
 const fl = t => ((t.match(/[\u0621-\u064A\u0671][^\u0621-\u064A\u0671]*/) || [t])[0]) + "…";
-
-// تفعيل استجابة التبديل الفورية لزر إخفاء الكلمات
-document.addEventListener("DOMContentLoaded", () => {
-  const hideNormalEl = document.getElementById("hideNormal");
-  if (hideNormalEl) {
-    hideNormalEl.onchange = () => {
-      if (typeof render === "function") render();
-    };
-  }
-});
 
 if ($("mMask")) {
   $("mMask").onchange = render;
