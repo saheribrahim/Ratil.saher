@@ -1,5 +1,5 @@
 // ============================================================================
-// Ratil.saher - Core JavaScript (Strict Sequential Recitation - No Jumping)
+// Ratil.saher - Core JavaScript (Final & Optimized)
 // ============================================================================
 
 const $ = id => document.getElementById(id);
@@ -27,7 +27,7 @@ function htmlOf(i) {
   return words[i] ? words[i].t : "";
 }
 
-// مطابقة متتابعة صارمة تبدأ حصرياً من الموضع الحالي (pos) دون قفز للأسفل أو المنتصف
+// مطابقة متتابعة صارمة تبدأ تسلسلياً من الموضع الحالي (pos)
 function alignBest(cands) {
   if (!words.length || !cands || !cands.length) return;
   for (const tokens of cands) {
@@ -44,7 +44,7 @@ function alignBest(cands) {
         tIdx++;
         p++;
       } else {
-        break; // التوقف فوراً إذا لم تتطابق الكلمة الحالية بالترتيب (منع القفز للمنتصف)
+        break; 
       }
     }
     
@@ -233,7 +233,37 @@ function stop() {
   if (pos >= words.length) msg("Finished. Tap Reset to try again.");
 }
 
+// التحكم المتبادل الحصري: منع تفعيل وضع الحفظ ووضع إخفاء للقراءة معاً في نفس الوقت
+document.addEventListener("DOMContentLoaded", () => {
+  const readingHideToggle = $("readingHideToggle");
+  const memToggleEl = $("hide"); // زر وضع الحفظ Memorization mode
+
+  if (readingHideToggle && memToggleEl) {
+    readingHideToggle.onchange = () => {
+      if (readingHideToggle.checked) {
+        memToggleEl.checked = false;
+        document.body.classList.remove("mem");
+        if (typeof memOn !== "undefined") memOn = false;
+      }
+      if (readingHideToggle.checked) {
+        document.body.classList.add("reading-hide");
+      } else {
+        document.body.classList.remove("reading-hide");
+      }
+      render();
+    };
+
+    memToggleEl.onchange = () => {
+      if (memToggleEl.checked) {
+        readingHideToggle.checked = false;
+        document.body.classList.remove("reading-hide");
+      }
+      if (typeof memToggle === "function") memToggle();
+      render();
+    };
+  }
+});
+
 if ($("mic")) $("mic").onclick = () => listening ? stop() : start();
 if ($("reset")) $("reset").onclick = () => { stop(); if ($("live")) $("live").textContent = ""; load(); msg("Reset. Tap Start when ready."); };
-if ($("hide")) $("hide").onchange = () => { if (typeof memToggle === "function") memToggle(); };
 if ($("surah")) $("surah").onchange = () => { stop(); if ($("live")) $("live").textContent = ""; load(); };
