@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -11,44 +11,51 @@
 <main>
 <h1>Ratil · رتّل</h1>
 <div id="me" style="display:none;font-size:13px;color:var(--mute);margin-bottom:4px">👤 <b id="who"></b> · <span id="out" style="cursor:pointer;color:var(--accent)">Log out خروج</span></div>
-<div class="sub">Recite aloud. Words turn green when matched, red when skipped. · <a id="full" target="_blank" rel="noopener" style="color:var(--accent)">Open in browser</a></div>
+<div class="sub">اتلُ بصوتك، تتلون الكلمات المكتسبة بالأخضر فوراً. · <a id="full" target="_blank" rel="noopener" style="color:var(--accent)">افتح في المتصفح</a></div>
+
 <div class="bar">
   <select id="riwaya" aria-label="Riwaya"></select>
   <select id="surah" aria-label="Surah"></select>
   
-  <button id="imp">📥 Import text for this riwaya</button>
+  <button id="imp">📥 استيراد نص الرواية</button>
   <button id="net">🌐 تحميل كل سور الرواية Load all 114 surahs</button>
   
   <input type="file" id="file" accept=".txt,.json" hidden>
-  <button id="reset">Reset</button>
+  <button id="reset">إعادة ضبط Reset</button>
   <label class="tg"><input type="checkbox" id="hideNormal"> 👁️ إخفاء الكلمات (قراءة غيباً)</label>
   <label class="tg"><input type="checkbox" id="hide"> حفظ Memorization mode</label>
   <label class="tg"><input type="checkbox" id="tjw"> Tajweed colors أحكام التجويد</label>
 </div>
+
 <div id="memBar" class="bar" style="display:none">
-<label class="tg">من الآية <select id="mFrom"></select></label>
-<label class="tg">التكرار <select id="mReps"><option>1</option><option selected>3</option><option>5</option><option>10</option></select></label>
-<label class="tg"><input type="checkbox" id="mListen" checked> 🔊 استمع أولًا</label>
-<select id="mMask"><option value="blank">كلمات مخفية</option><option value="fl">الحرف الأول</option></select>
-<button id="mHint">💡 تلميح</button>
-<span id="mSt" style="font-size:14px"></span>
+  <label class="tg">من الآية <select id="mFrom"></select></label>
+  <label class="tg">التكرار <select id="mReps"><option>1</option><option selected>3</option><option>5</option><option>10</option></select></label>
+  <label class="tg"><input type="checkbox" id="mListen" checked> 🔊 استمع أولًا</label>
+  <select id="mMask"><option value="blank">كلمات مخفية</option><option value="fl">الحرف الأول</option></select>
+  <button id="mHint">💡 تلميح</button>
+  <span id="mSt" style="font-size:14px"></span>
 </div>
-<div id="msg">Tap Start, allow the microphone, then recite. Works best in Chrome or Safari.</div>
+
+<div id="msg">يرجى السماح بالميكروفون لبدء التلاوة والتتبع الفوري التلقائي.</div>
 <div id="gauge"><div class="gb"><i id="gm"></i></div><div id="gt"></div></div>
 <div id="legend" style="display:none"></div>
+
 <div class="card"><div id="text"></div><div id="live"></div></div>
+
 <div class="stats">
-  <div class="stat"><b id="sOk">0</b><span>Correct</span></div>
-  <div class="stat"><b id="sNear">0</b><span>Close</span></div>
-  <div class="stat"><b id="sMiss">0</b><span>Missed</span></div>
-  <div class="stat"><b id="sPct">0%</b><span>Progress</span></div>
+  <div class="stat"><b id="sOk">0</b><span>صحيح</span></div>
+  <div class="stat"><b id="sNear">0</b><span>قريب</span></div>
+  <div class="stat"><b id="sMiss">0</b><span>مفقود</span></div>
+  <div class="stat"><b id="sPct">0%</b><span>التقدم</span></div>
 </div>
 
 <div class="sub" style="margin-top:14px;text-align:center">نصوص الروايات من <a href="https://quranpedia.net" target="_blank" rel="noopener" style="color:var(--accent)">Quranpedia.net</a> · قراءة صوتية (الاستماع) من <a href="https://everyayah.com" target="_blank" rel="noopener" style="color:var(--accent)">EveryAyah.com</a></div>
+
 <div id="sheet"><div class="sc">
 <div id="sW"></div><div id="sI"></div>
 <div class="sb"><select id="sRec"></select><button id="sPlay" class="primary">🔊 النطق الصحيح</button><button id="sVerse">🔊 الآية كاملة</button><button id="sClose">إغلاق</button></div>
 </div></div>
+
 <div id="auth"><div class="ac">
 <h2>Ratil · رتّل</h2>
 <div class="tabs"><button id="tL" class="primary">Log in دخول</button><button id="tS">Sign up حساب جديد</button></div>
@@ -58,7 +65,9 @@
 <button id="aGo" class="primary">Log in</button>
 <div id="aMsg"></div>
 </div></div>
+
 <div id="adminPanel" style="display:none;margin-top:20px;padding:16px;border:1px solid #ddd;border-radius:12px;background:#fff;"></div>
+
 <script src="data.js"></script>
 <script src="core.js"></script>
 <script src="library.js"></script>
