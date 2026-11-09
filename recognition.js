@@ -1,21 +1,19 @@
 // ============================================================================
-// Ratil.saher - Robust & Continuous Recognition Engine
+// Ratil.saher - Final Stable & Responsive Recognition Engine
 // ============================================================================
 
 let recognition = null;
 window.isListeningActive = false;
-let restartTimeout = null;
 
 function initRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    console.warn("متصفحك لا يدعم التعرف الصوتي المباشر.");
+    console.warn("متصفحك لا يدعم التعرف الصوتي.");
     const msg = document.getElementById("msg");
-    if (msg) msg.textContent = "متصفحك لا يدعم التعرف الصوتي. يجدر استخدام متصفح Google Chrome.";
+    if (msg) msg.textContent = "يرجى استخدام متصفح Google Chrome لتعمل التلاوة الصوتية بشكل سليم.";
     return;
   }
 
-  // منع إنشاء أكثر من نسخة
   if (recognition) {
     try { recognition.stop(); } catch (e) {}
   }
@@ -28,46 +26,32 @@ function initRecognition() {
   recognition.onresult = (event) => {
     let transcript = "";
     for (let i = event.resultIndex; i < event.results.length; ++i) {
-      if (event.results[i].isFinal || event.results[i][0].confidence > 0.4) {
-        transcript += event.results[i][0].transcript + " ";
-      }
+      transcript += event.results[i][0].transcript + " ";
     }
-    
     if (transcript.trim()) {
       processSpokenText(transcript.trim());
     }
   };
 
   recognition.onerror = (event) => {
-    console.warn("خطأ في التعرف الصوتي:", event.error);
-    // بعض الأخطاء مثل 'not-allowed' تمنع إعادة التشغيل الفوري
+    console.warn("ملاحظة التعرف الصوتي:", event.error);
     if (event.error === 'not-allowed') {
-      window.isListeningActive = false;
       const msg = document.getElementById("msg");
-      if (msg) msg.textContent = "يرجى السماح باستخدام الميكروفون لبدء التلاوة.";
+      if (msg) msg.textContent = "الرجاء السماح للمتصفح بالوصول إلى الميكروفون (رمز القفل بجانب الرابط).";
     }
   };
 
   recognition.onend = () => {
-    // إعادة التشغيل تلقائياً فوراً إذا كانت التلاوة نشطة لضمان عدم التوقف أبداً
+    // إعادة التشغيل تلقائياً إذا كانت التلاوة نشطة
     if (window.isListeningActive) {
-      clearTimeout(restartTimeout);
-      restartTimeout = setTimeout(() => {
-        try {
-          recognition.start();
-          console. تم إعادة تشغيل الميكروفون في الخلفية بنجاح.");
-        } catch (e) {
-          // محاولة أخرى بعد ثانية في حال حدوث تداخل
-          setTimeout(() => {
-            try { recognition.start(); } catch (err) {}
-          }, 1000);
-        }
+      setTimeout(() => {
+        try { recognition.start(); } catch (e) {}
       }, 300);
     }
   };
 }
 
-// دالة مطابقة الكلمات والانتقال للكلمة التالية فوراً وبدقة
+// دالة مطابقة الكلمات والانتقال الفوري للكلمة التالية
 function processSpokenText(spokenText) {
   if (typeof words === "undefined" || !words.length) return;
   
@@ -79,17 +63,15 @@ function processSpokenText(spokenText) {
     let cleanSpoken = normalizeArabicText(sw);
     if (!cleanSpoken) continue;
     
-    // البحث في الكلمات القادمة (نطاق 5 كلمات لضمان سرعة الاستجابة)
+    // البحث في الكلمات القادمة بدقة وسرعة
     for (let j = currentPos; j < Math.min(currentPos + 5, words.length); j++) {
       let cleanTarget = normalizeArabicText(words[j].n);
       
-      // مطابقة ذكية ودقيقة
       if (cleanSpoken === cleanTarget || cleanTarget.includes(cleanSpoken) || cleanSpoken.includes(cleanTarget)) {
         if (typeof st !== "undefined") {
           st[j] = "ok";
         }
-        // الانتقال الفوري للكلمة التالية
-        currentPos = j + 1;
+        currentPos = j + 1; // الانتقال الفوري للكلمة التالية
         break;
       }
     }
@@ -99,16 +81,16 @@ function processSpokenText(spokenText) {
   if (typeof render === "function") render();
 }
 
-// تنظيف النصوص العربية لمطابقة صوتية مرنة
+// تنظيف النصوص العربية لضمان المطابقة الصحيحة
 function normalizeArabicText(str) {
   if (!str) return "";
   return str.replace(/[\u064B-\u065F\u0670]/g, "") // إزالة التشكيل
-             .replace(/[إأآٱاى]/g, "ا")
+             .replace(/[إأآٱاىوؤيئ]/g, m => ({'إ':'ا','أ':'ا','آ':'ا','ٱ':'ا','ى':'ا','و':'و','ؤ':'و','ي':'ي','ئ':'ي'}[m]))
              .replace(/ة/g, "ه")
              .trim();
 }
 
-// بدء التشغيل التلقائي عند تحميل الصفحة
+// التشغيل التلقائي عند تحميل الصفحة
 document.addEventListener("DOMContentLoaded", () => {
   initRecognition();
   window.isListeningActive = true;
@@ -117,9 +99,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       recognition.start();
       const msg = document.getElementById("msg");
-      if (msg) msg.textContent = "الميكروفون مستعد.. يمكنك البدء بالتلاوة الآن.";
+      if (msg) msg.textContent = "جاري الاستماع.. ابدأ التلاوة الآن وسيتم التتبع تلقائياً.";
     } catch (e) {
-      console.warn("بدء الاستماع تلقائياً:", e);
+      console.warn("تعذر البدء التلقائي للميكروفون:", e);
     }
-  }, 800);
+  }, 1000);
 });
