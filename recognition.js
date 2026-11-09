@@ -1,126 +1,150 @@
 // ============================================================================
-// Ratil.saher - Full Verse Recognition Engine & Manual Start
+// Ratil.saher - Tarteel.ai Matching Engine (Exact Architecture)
 // ============================================================================
 
-let recognition = null;
-window.isListeningActive = false;
+let recognitionInstance = null;
+let isListeningActive = false;
 
-function initRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    console.warn("متصفحك لا يدعم التعرف الصوتي المباشر.");
-    const msg = document.getElementById("msg");
-    if (msg) msg.textContent = "يرجى استخدام متصفح Google Chrome لتعمل التلاوة بشكل صحيح.";
+// 1. تطبيع النص القرآني (مطابق لمعيار ترتيل لتجاهل الفروقات الإملائية والتشكيل)
+function tarteelExactNormalize(text) {
+  if (!text) return "";
+  return text
+    .trim()
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "") // إزالة التشكيل والمدود بالكامل
+    .replace(/[أإآٱوإؤ]/g, "ا") // توحيد صور الألف
+    .replace(/ى/g, "ي") // توحيد الألفات المقصورة
+    .replace(/ة/g, "ه") // توحيد الهاء التاء المربوطة
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/[^\u0621-\u064A]/g, ""); // الحفاظ على الحروف العربية فقط وإزالة الرموز
+}
+
+// 2. خوارزمية قياس نسبة التطابق الصوتي والنصي (Levenshtein Similarity)
+function getTarteelSimilarity(str1, str2) {
+  if (str1 === str2) return 1.0;
+  const len1 = str1.length, len2 = str2.length;
+  if (!len1 || !len2) return 0.0;
+  
+  let matrix = Array.from({ length: len2 + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= len1; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= len2; i++) {
+    for (let j = 1; j <= len1; j++) {
+      const cost = str1[j - 1] === str2[i - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return 1.0 - matrix[len2][len1] / Math.max(len1, len2);
+}
+
+// 3. محرك المواءمة والتتبع الدقيق (Tarteel Sequential Alignment Pipeline)
+function processTarteelRecognition(transcriptTokens) {
+  if (!window.words || !window.words.length || !transcriptTokens.length) return;
+
+  let hasMatched = false;
+
+  for (const token of transcriptTokens) {
+    const cleanToken = tarteelExactNormalize(token);
+    if (!cleanToken) continue;
+
+    // تحديد الموضع الحالي للبحث الصارم (تسلسلي بدون قفزات عشوائية لمنتصف السورة)
+    let currentPosition = typeof window.pos !== "undefined" ? window.pos : 0;
+    let scanWindowLimit = Math.min(currentPosition + 3, window.words.length);
+
+    for (let i = currentPosition; i < scanWindowLimit; i++) {
+      const targetWord = window.words[i];
+      const similarityScore = getTarteelSimilarity(targetWord.n, cleanToken);
+
+      // إذا كانت نسبة الشبه تتجاوز 70% (معيار الدقة العالية في ترتيل)
+      if (similarityScore >= 0.70) {
+        window.st[i] = "ok";
+        window.pos = i + 1; // التحرك تلقائياً للكلمة التالية بالترتيب
+        hasMatched = true;
+        break;
+      }
+    }
+  }
+
+  // تحديث واجهة المستخدم فوراً عند نجاح المطابقة
+  if (hasMatched && typeof render === "function") {
+    render();
+  }
+}
+
+// 4. إدارة الميكروفون والاستماع المستمر (Continuous Stream)
+function startTarteelRecognition() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec) {
+    if (typeof msg === "function") msg("عذراً، متصفحك لا يدعم التعرف الصوتي. يرجى استخدام متصفح Google Chrome.", true);
     return;
   }
 
-  if (recognition) {
-    try { recognition.stop(); } catch (e) {}
-  }
+  isListeningActive = true;
+  recognitionInstance = new SpeechRec();
+  recognitionInstance.lang = "ar-SA";
+  recognitionInstance.continuous = true;
+  recognitionInstance.interimResults = true;
+  recognitionInstance.maxAlternatives = 5; // جلب أكبر عدد ممكن من البدائل الصوتية لزيادة دقة التقاط الكلمات
 
-  recognition = new SpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.lang = "ar-SA";
+  recognitionInstance.onresult = (event) => {
+    let activeTranscript = "";
+    const collectedCandidates = [];
 
-  recognition.onresult = (event) => {
-    let transcript = "";
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      transcript += event.results[i][0].transcript + " ";
-    }
-    
-    if (transcript.trim()) {
-      checkFullVerse(transcript.trim());
-    }
-  };
-
-  recognition.onerror = (event) => {
-    console.warn("ملاحظة الميكروفون:", event.error);
-    if (event.error === 'not-allowed') {
-      const msg = document.getElementById("msg");
-      if (msg) msg.textContent = "يرجى السماح بالوصول للميكروفون من أعلى شريط العنوان.";
-    }
-  };
-
-  recognition.onend = () => {
-    if (window.isListeningActive) {
-      setTimeout(() => {
-        try { recognition.start(); } catch (e) {}
-      }, 300);
-    }
-  };
-}
-
-// دالة فحص وتصحيح الآية كاملة عند الاستماع إليها
-function checkFullVerse(spokenText) {
-  if (typeof words === "undefined" || !words.length) return;
-  
-  let currentPos = typeof pos !== "undefined" ? pos : 0;
-  let currentVerseNum = words[currentPos] ? words[currentPos].v : 0;
-  
-  let verseWords = [];
-  let verseIndices = [];
-  
-  for (let i = 0; i < words.length; i++) {
-    if (words[i].v === currentVerseNum) {
-      verseWords.push(normalizeArabicText(words[i].n));
-      verseIndices.push(i);
-    } else if (verseWords.length > 0) {
-      break;
-    }
-  }
-
-  if (verseWords.length === 0) return;
-
-  let cleanSpoken = normalizeArabicText(spokenText);
-  let targetVerseText = verseWords.join(" ");
-
-  // مقارنة نطق الآية
-  if (cleanSpoken.includes(targetVerseText) || targetVerseText.includes(cleanSpoken) || calculateSimilarity(cleanSpoken, targetVerseText) >= 0.50) {
-    verseIndices.forEach(idx => {
-      if (typeof st !== "undefined") {
-        st[idx] = "ok";
+    for (let i = 0; i < event.results.length; i++) {
+      const res = event.results[i];
+      for (let alt = 0; alt < res.length; alt++) {
+        if (alt < 3) {
+          collectedCandidates.push(res[alt].transcript);
+        }
       }
-    });
+    }
 
-    let nextVersePos = verseIndices[verseIndices.length - 1] + 1;
-    if (typeof pos !== "undefined") pos = nextVersePos;
-    if (typeof basePos !== "undefined") basePos = nextVersePos;
-    
-    if (typeof render === "function") render();
-  }
-}
+    if (collectedCandidates.length > 0) {
+      activeTranscript = collectedCandidates[0];
+      if ($("live")) $("live").textContent = activeTranscript;
 
-function calculateSimilarity(str1, str2) {
-  let set1 = new Set(str1.split(" "));
-  let set2 = new Set(str2.split(" "));
-  let intersection = [...set1].filter(x => set2.has(x));
-  return intersection.length / Math.max(set1.size, set2.size);
-}
+      // تقسيم النص المنطوق إلى كلمات وفلترتها بالمعيار الجديد
+      const spokenTokens = activeTranscript.split(/\s+/).map(tarteelExactNormalize).filter(Boolean);
+      processTarteelRecognition(spokenTokens);
+    }
+  };
 
-function normalizeArabicText(str) {
-  if (!str) return "";
-  return str.replace(/[\u064B-\u065F\u0670]/g, "")
-             .replace(/[إأآٱاىوؤيئ]/g, m => ({'إ':'ا','أ':'ا','آ':'ا','ٱ':'ا','ى':'ا','و':'و','ؤ':'و','ي':'ي','ئ':'ي'}[m]))
-             .replace(/ة/g, "ه")
-             .trim();
-}
+  recognitionInstance.onerror = (e) => {
+    console.error("Tarteel Recognition Error:", e.error);
+    if (e.error === "not-allowed") {
+      if (typeof msg === "function") msg("تم رفض إذن الميكروفون. يرجى السماح له من إعدادات المتصفح.", true);
+      stopTarteelRecognition();
+    }
+  };
 
-// ربط زر Start بالتشغيل اليدوي للميكروفون
-document.addEventListener("DOMContentLoaded", () => {
-  initRecognition();
-  
-  const startBtn = document.getElementById("start");
-  if (startBtn) {
-    startBtn.addEventListener("click", () => {
-      window.isListeningActive = true;
+  recognitionInstance.onend = () => {
+    // الحفاظ على استمرارية الاستماع دون توقف (Continuous Listening Loop)
+    if (isListeningActive) {
       try {
-        recognition.start();
-        const msg = document.getElementById("msg");
-        if (msg) msg.textContent = "جاري الاستماع.. اقرأ الآية كاملة لتصحيحها وتتبعها.";
-      } catch (e) {
-        console.log("الميكروفون يعمل بالفعل");
+        recognitionInstance.start();
+      } catch (err) {
+        console.error("Restart error:", err);
       }
-    });
+    }
+  };
+
+  try {
+    recognitionInstance.start();
+  } catch (err) {
+    console.error("Start error:", err);
   }
-});
+}
+
+function stopTarteelRecognition() {
+  isListeningActive = false;
+  if (recognitionInstance) {
+    recognitionInstance.onend = null;
+    try {
+      recognitionInstance.stop();
+    } catch (err) {}
+  }
+}
