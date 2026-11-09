@@ -1,5 +1,5 @@
 /* ============================================================================
-   Ratil.saher - Style.css (Dark UI, Clean Hidden Reading & Recitation View)
+   Ratil.saher - Style.css (Highlighted Current Word in Reading-Hide Mode)
    ============================================================================ */
 
 :root {
@@ -61,10 +61,11 @@ body {
 .w.near { color: var(--near); }
 .w.miss { color: var(--miss); }
 
-/* الكلمة الحالية أثناء التلاوة العادية */
+/* الكلمة الحالية (تظهر واضحة ومحددة بمربع عند الاستماع) */
 .w.cur {
   background-color: var(--cur);
-  border-bottom: 2px solid var(--ok);
+  border: 1px solid var(--ok);
+  color: var(--text) !important;
 }
 
 /* ============================================================================
@@ -78,12 +79,13 @@ body.reading-hide #text .w {
   transition: all 0.2s;
 }
 
-/* منع ظهور أي مربعات تحديد بارزة أو مزعجة للكلمة الحالية في وضع الإخفاء */
+/* السماح للكلمة الحالية (.cur) بالظهور بوضوح داخل مربع التحديد حتى لو كان وضع الإخفاء مفعلاً */
 body.reading-hide #text .w.cur {
-  color: transparent !important;
-  background: transparent !important;
-  filter: blur(6px) !important;
-  box-shadow: none !important;
+  color: var(--text) !important;
+  background-color: var(--cur) !important;
+  border: 1px solid var(--ok) !important;
+  filter: none !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
 }
 
 /* أزرار التحكم والواجهة */
