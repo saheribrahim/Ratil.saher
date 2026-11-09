@@ -1,5 +1,5 @@
 // ============================================================================
-// Ratil.saher - Final Stable & Responsive Recognition Engine
+// Ratil.saher - Full Verse Recognition & Correction Engine
 // ============================================================================
 
 let recognition = null;
@@ -9,8 +9,6 @@ function initRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     console.warn("متصفحك لا يدعم التعرف الصوتي.");
-    const msg = document.getElementById("msg");
-    if (msg) msg.textContent = "يرجى استخدام متصفح Google Chrome لتعمل التلاوة الصوتية بشكل سليم.";
     return;
   }
 
@@ -28,21 +26,17 @@ function initRecognition() {
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       transcript += event.results[i][0].transcript + " ";
     }
+    
     if (transcript.trim()) {
-      processSpokenText(transcript.trim());
+      checkFullVerse(transcript.trim());
     }
   };
 
   recognition.onerror = (event) => {
-    console.warn("ملاحظة التعرف الصوتي:", event.error);
-    if (event.error === 'not-allowed') {
-      const msg = document.getElementById("msg");
-      if (msg) msg.textContent = "الرجاء السماح للمتصفح بالوصول إلى الميكروفون (رمز القفل بجانب الرابط).";
-    }
+    console.warn("خطأ في التعرف الصوتي:", event.error);
   };
 
   recognition.onend = () => {
-    // إعادة التشغيل تلقائياً إذا كانت التلاوة نشطة
     if (window.isListeningActive) {
       setTimeout(() => {
         try { recognition.start(); } catch (e) {}
@@ -51,37 +45,62 @@ function initRecognition() {
   };
 }
 
-// دالة مطابقة الكلمات والانتقال الفوري للكلمة التالية
-function processSpokenText(spokenText) {
+// دالة فحص وتصحيح الآية كاملة عند نطقها
+function checkFullVerse(spokenText) {
   if (typeof words === "undefined" || !words.length) return;
   
-  const spokenWords = spokenText.split(/\s+/);
   let currentPos = typeof pos !== "undefined" ? pos : 0;
-  const startPoint = typeof basePos !== "undefined" ? basePos : 0;
-
-  for (let sw of spokenWords) {
-    let cleanSpoken = normalizeArabicText(sw);
-    if (!cleanSpoken) continue;
-    
-    // البحث في الكلمات القادمة بدقة وسرعة
-    for (let j = currentPos; j < Math.min(currentPos + 5, words.length); j++) {
-      let cleanTarget = normalizeArabicText(words[j].n);
-      
-      if (cleanSpoken === cleanTarget || cleanTarget.includes(cleanSpoken) || cleanSpoken.includes(cleanTarget)) {
-        if (typeof st !== "undefined") {
-          st[j] = "ok";
-        }
-        currentPos = j + 1; // الانتقال الفوري للكلمة التالية
-        break;
-      }
+  
+  // استخراج كلمات الآية الحالية فقط من مصفوفة الكلمات
+  let currentVerseNum = words[currentPos] ? words[currentPos].v : 0;
+  let verseWords = [];
+  let verseIndices = [];
+  
+  for (let i = 0; i < words.length; i++) {
+    if (words[i].v === currentVerseNum) {
+      verseWords.push(normalizeArabicText(words[i].n));
+      verseIndices.push(i);
+    } else if (verseWords.length > 0) {
+      break; // انتهت الآية الحالية
     }
   }
 
-  if (typeof pos !== "undefined") pos = currentPos;
-  if (typeof render === "function") render();
+  if (verseWords.length === 0) return;
+
+  // تنظيف النص المقروء للمقارنة
+  let cleanSpoken = normalizeArabicText(spokenText);
+  let targetVerseText = verseWords.join(" ");
+
+  // التحقق مما إذا كانت الآية قد نُطقت بشكل صحيح ومتقارب
+  let matchScore = calculateSimilarity(cleanSpoken, targetVerseText);
+
+  // إذا كانت نسبة التطابق جيدة، نعتبر الآية صحيحة وننتقل للآية التي تليها مباشرة
+  if (matchScore >= 0.55 || cleanSpoken.includes(targetVerseText) || targetVerseText.includes(cleanSpoken)) {
+    // تلوين جميع كلمات الآية الحالية باللون الصحيح (ok)
+    verseIndices.forEach(idx => {
+      if (typeof st !== "undefined") {
+        st[idx] = "ok";
+      }
+    });
+
+    // الانتقال الفوري لأول كلمة في الآية التالية
+    let nextVersePos = verseIndices[verseIndices.length - 1] + 1;
+    if (typeof pos !== "undefined") pos = nextVersePos;
+    if (typeof basePos !== "undefined") basePos = nextVersePos;
+    
+    if (typeof render === "function") render();
+  }
 }
 
-// تنظيف النصوص العربية لضمان المطابقة الصحيحة
+// دالة حساب نسبة التشابه البسيطة بين النصوص
+function calculateSimilarity(str1, str2) {
+  let set1 = new Set(str1.split(" "));
+  let set2 = new Set(str2.split(" "));
+  let intersection = [...set1].filter(x => set2.has(x));
+  return intersection.length / Math.max(set1.size, set2.size);
+}
+
+// تنظيف النصوص العربية للمقارنة الدقيقة
 function normalizeArabicText(str) {
   if (!str) return "";
   return str.replace(/[\u064B-\u065F\u0670]/g, "") // إزالة التشكيل
@@ -98,10 +117,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {
     try {
       recognition.start();
-      const msg = document.getElementById("msg");
-      if (msg) msg.textContent = "جاري الاستماع.. ابدأ التلاوة الآن وسيتم التتبع تلقائياً.";
     } catch (e) {
-      console.warn("تعذر البدء التلقائي للميكروفون:", e);
+      console.warn("تعذر بدء الميكروفون تلقائياً:", e);
     }
   }, 1000);
 });
