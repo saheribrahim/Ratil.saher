@@ -1,8 +1,8 @@
-// Recognition matching: Strict Tajweed & Tashkeel validation at 90% accuracy for Ratil.saher
+// Recognition matching: Ultra-smooth Tarteel-style flow & flexible Mad handling for Ratil.saher
 const TH = { 
-  strict: [.90, .75], // تم ضبط دقة التطابق الصارم على 90% للتشكيل والتجويد
-  normal: [.78, .58], 
-  lenient: [.65, .45] 
+  strict: [.75, .60], // مرونة عالية تضمن سلاسة الاستماع وعدم التوقف المزعج
+  normal: [.65, .50], 
+  lenient: [.55, .40] 
 };
 
 const MUQATTAAH_SET = new Set([
@@ -26,7 +26,7 @@ const sq = t => t.replace(/(.)\1+/g, "$1");
 
 const ALL_NAMES = new Set(Object.values(LETTER_NAMES).flat().filter(x => x.length > 1).map(sq));
 const nameOK = (tok, names) => names.includes(tok) ||
-  (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 3 && tok.length >= 2 && sim(tok, nm) >= .65));
+  (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 3 && tok.length >= 2 && sim(tok, nm) >= .60));
 
 function muqMatch(rw, i, n) {
   if (!rw[i]) return 0;
@@ -51,7 +51,7 @@ function muqMatch(rw, i, n) {
   const full = sq(L.map(ch => (LETTER_NAMES[ch] || [ch])[0]).join(""));
   for (let m = 1; m <= Math.min(L.length + 2, rw.length - i); m++) {
     const joined = sq(rw.slice(i, i + m).join(""));
-    if (joined.length >= full.length * .8 && sim(joined, full) >= .80) return m;
+    if (joined.length >= full.length * .7 && sim(joined, full) >= .75) return m;
   }
 
   return 0;
@@ -73,7 +73,7 @@ function normalizeArabic(str, preserveTashkeel = false) {
     .replace(/ئي/g, "ي").replace(/ئ/g, "ي")
     .replace(/ة/g, "ه")
     .replace(/ـ/g, "")
-    .replace(/([اوي])\1+/g, "$1")
+    .replace(/([اوي])\1+/g, "$1") // مرونة تامة مع المدود الطويلة والصوتية
     .trim();
 
   const sunLetters = /[تثدذرزسصضطظلن]/;
@@ -89,7 +89,7 @@ function enhancedSim(w1, w2) {
   if (aFull === bFull) return 1.0;
 
   const a = normalizeArabic(w1, false), b = normalizeArabic(w2, false);
-  if (a === b) return 0.95;
+  if (a === b) return 0.90;
 
   const strip = x => x.replace(/[ا\u0621]/g, "");
   const stretch = x => x.replace(/([اوي])+/g, "$1");
@@ -97,13 +97,13 @@ function enhancedSim(w1, w2) {
   return Math.max(
     sim(w1, w2), 
     sim(a, b), 
-    0.95 * sim(stretch(a), stretch(b)), 
-    0.90 * sim(strip(stretch(a)), stretch(b))
+    0.92 * sim(stretch(a), stretch(b)), 
+    0.88 * sim(strip(stretch(a)), stretch(b))
   );
 }
 
 function trial(rw) {
-  const [okT, nearT] = TH.strict; // هنا سيتم تطبيق معيار الـ 90%
+  const [okT, nearT] = TH.strict;
   const s = baseSt.slice(), h = hd.slice(); let p = basePos;
   for (let k = basePos; k < h.length; k++) h[k] = "";
   const end = Math.min(lim, words.length);
@@ -130,12 +130,12 @@ function trial(rw) {
         }
         if (j + 1 < verseEnd && !isMuq(j + 1)) {
           const m = enhancedSim(rw[i], words[j].n + words[j + 1].n);
-          if (m >= .85 && m > sc) { sc = m; u = -2; }
+          if (m >= .72 && m > sc) { sc = m; u = -2; }
         }
       }
       if (sc >= nearT && sc > score + (j > p ? .05 : 0)) {
         hit = j; score = sc; used = u;
-        if (sc >= 0.99) break;
+        if (sc >= 0.95) break;
       }
     }
     if (hit < 0) continue;
