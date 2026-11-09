@@ -19,19 +19,16 @@ function load(){
 function render(){
   let ok=0,near=0,miss=0;
   
-  // التحقق من تفعيل وضع إخفاء الكلمات في القراءة العادية
   const hideNormalEl = $("hideNormal");
   const isNormalHide = hideNormalEl && hideNormalEl.checked;
 
   words.forEach((w,i)=>{
     w.el.className="w "+st[i]+(i===pos&&listening?" cur":"")+(i===hintIdx?" hint":"");
     
-    // التعامل مع العرض (سواء مخفي أو ظاهر بالحركات والتجويد)
     if(memOn&&$("mMask").value==="fl"){
       const mk=st[i]==="todo"&&i!==hintIdx;
       if(w.m!==mk){w.m=mk;w.el.innerHTML=mk?fl(w.t):htmlOf(i)}
     } else if(isNormalHide && st[i] !== "ok") {
-      // إخفاء الكلمة في الوضع العادي بوضع ضبابي حتى يتم نطقها بشكل صحيح
       w.el.innerHTML = '<span style="filter: blur(6px); opacity: 0.15; user-select: none; background: rgba(255,255,255,0.08); border-radius: 4px; padding: 0 6px;">ُٔـ</span>';
     } else {
       if(w.m){w.m=false;}
@@ -78,11 +75,27 @@ function stop(){
   if(pos>=words.length)msg("Finished. Tap Reset to try again.");
 }
 
-// تفعيل الاستجابة الفورية عند النقر على زر إخفاء القراءة العادية
+// التبديل الحصري بين وضع الحفظ ووضع إخفاء الكلمات العادي
 document.addEventListener("DOMContentLoaded", () => {
   const hideNormalEl = $("hideNormal");
-  if (hideNormalEl) {
-    hideNormalEl.onchange = () => render();
+  const hideMemEl = $("hide");
+
+  if (hideNormalEl && hideMemEl) {
+    hideNormalEl.onchange = () => {
+      if (hideNormalEl.checked) {
+        hideMemEl.checked = false;
+        if (typeof memToggle === "function" && memOn) memToggle();
+      }
+      render();
+    };
+
+    hideMemEl.onchange = () => {
+      if (hideMemEl.checked) {
+        hideNormalEl.checked = false;
+      }
+      if (typeof memToggle === "function") memToggle();
+      render();
+    };
   }
 });
 
