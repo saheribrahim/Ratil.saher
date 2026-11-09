@@ -1,39 +1,16 @@
 // ============================================================================
-// Ratil.saher - Main JavaScript Controller (Fully Combined & Optimized)
+// Ratil.saher - Final Fixed Main Controller & Styling Injection
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. بدء تشغيل التطبيق الأساسي
   if (typeof load === "function") {
     load();
   }
 
-  // 2. حقن أدوات وإدارة المستخدمين
-  const adminUsersScript = document.createElement("script");
-  adminUsersScript.src = "admin-users.js";
-  adminUsersScript.defer = true;
-  document.body.appendChild(adminUsersScript);
-
-  // 3. إدارة واختيار السور (ربط القائمة والتحميل التلقائي)
+  // 1. تعبئة قائمة السور تلقائياً إذا كانت فارغة لضمان ظهورها وتفعيلها
   const surahSelect = document.getElementById("surah");
-  
-  if (surahSelect) {
-    surahSelect.addEventListener("change", (e) => {
-      const surahIndex = e.target.value;
-      
-      if (typeof loadSurah === "function") {
-        loadSurah(surahIndex);
-      } else if (typeof selectSurah === "function") {
-        selectSurah(surahIndex);
-      } else if (typeof render === "function") {
-        render();
-      }
-    });
-  }
-
-  // التحقق من تعبئة قائمة السور أو تحميل الفاتحة افتراضياً
   setTimeout(() => {
-    if (surahSelect && surahSelect.options.length === 0) {
+    if (surahSelect && surahSelect.options.length <= 1) {
       if (typeof surahs !== "undefined" && Array.isArray(surahs)) {
         surahs.forEach((s, idx) => {
           const opt = document.createElement("option");
@@ -43,37 +20,28 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
-    
-    // تحميل السورة الأولى تلقائياً عند البدء إذا لم تُختار سورة بعد
-    if (surahSelect && !surahSelect.value && typeof loadSurah === "function") {
-      loadSurah(1);
-    }
-  }, 200);
+  }, 100);
 
-  // 4. تفعيل زر Reset وإعادة ضبط التلاوة
-  const resetBtn = document.getElementById("reset");
-  if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-      if (typeof basePos !== "undefined") basePos = 0;
-      if (typeof pos !== "undefined") pos = 0;
-      if (typeof st !== "undefined" && Array.isArray(st)) st.fill("");
-      if (typeof hd !== "undefined" && Array.isArray(hd)) hd.fill("");
+  // 2. ربط اختيار السورة وتغييرها بشكل صحيح ودقيق
+  if (surahSelect) {
+    surahSelect.addEventListener("change", (e) => {
+      const idx = parseInt(e.target.value, 10);
       
-      if (typeof render === "function") {
+      // تجربة كل الدوال المحتملة لتغيير السورة في مشروعك
+      if (typeof changeSurah === "function") {
+        changeSurah(idx);
+      } else if (typeof loadSurah === "function") {
+        loadSurah(idx);
+      } else if (typeof selectSurah === "function") {
+        selectSurah(idx);
+      } else if (typeof render === "function") {
+        if (typeof currentSurah !== "undefined") currentSurah = idx;
         render();
-      } else if (typeof updateStats === "function") {
-        updateStats();
-      }
-      
-      const msg = document.getElementById("msg");
-      if (msg) {
-        msg.textContent = "تم إعادة الضبط. يمكنك متابعة التلاوة.";
-        msg.classList.remove("err");
       }
     });
   }
 
-  // 5. تفعيل وإلغاء وضع إخفاء الآيات للقراءة المستقل (Reading Hide)
+  // 3. تفعيل زر إخفاء القراءة بشكل مستقل تماماً
   const readingHideToggle = document.getElementById("readingHideToggle");
   if (readingHideToggle) {
     readingHideToggle.addEventListener("change", (e) => {
@@ -85,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 6. تفعيل وضع الحفظ الأساسي (Memorization Mode)
+  // 4. تفعيل وضع الحفظ Memorization Mode
   const memToggle = document.getElementById("hide");
   if (memToggle) {
     memToggle.addEventListener("change", (e) => {
@@ -97,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 7. تفعيل أحكام التجويد (Tajweed Colors)
+  // 5. تفعيل أحكام التجويد
   const tjToggle = document.getElementById("tjw");
   if (tjToggle) {
     tjToggle.addEventListener("change", (e) => {
@@ -109,14 +77,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 8. إظهار الكلمة كـ Hint عند النقر عليها في وضع الحفظ
-  const textContainer = document.getElementById("text");
-  if (textContainer) {
-    textContainer.addEventListener("click", (e) => {
-      const wordEl = e.target.closest(".w");
-      if (wordEl) {
-        wordEl.classList.toggle("hint");
-      }
+  // 6. تفعيل زر Reset
+  const resetBtn = document.getElementById("reset");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      if (typeof basePos !== "undefined") basePos = 0;
+      if (typeof pos !== "undefined") pos = 0;
+      if (typeof render === "function") render();
     });
   }
 });
+
+// حقن كود CSS الخاص بوضع إخفاء القراءة مباشرة لتجنب أي مشاكل في الملفات
+const styleTag = document.createElement("style");
+styleTag.textContent = `
+  body.reading-hide #text .w:not(.cur) {
+    filter: blur(6px);
+    opacity: 0.3;
+    transition: filter 0.2s, opacity 0.2s;
+  }
+  body.reading-hide #text .w.cur {
+    filter: none;
+    opacity: 1;
+  }
+`;
+document.head.appendChild(styleTag);
