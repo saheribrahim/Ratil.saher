@@ -1,20 +1,143 @@
-/* اجعل اتجاه الصفحة بالكامل يبدأ من اليسار لليمن (LTR) */
-html, body {
-  direction: ltr !important;
-  text-align: left !important;
+/* ============================================================================ */
+/* Ratil.saher - Modern Dark & Clean UI Style Sheet                             */
+/* ============================================================================ */
+
+:root {
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --text: #f8fafc;
+  --mute: #94a3b8;
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --border: #334155;
+  --danger: #ef4444;
 }
 
-/* الحفاظ على النصوص والآيات القرآنية بالاتجاه الصحيح (من اليمين لليسار) وقراءة مريحة */
-.card, #text, #live, h1, .sub, .bar select, .bar button, .bar label, #memBar {
-  direction: rtl !important;
-  text-align: right !important;
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 20px;
+  direction: ltr; /* الترتيب العام من اليسار لليمين */
 }
 
-/* ترتيب أشرطة التحكم والأزرار لتصطف من اليسار لليمن */
-.bar, .stats, #me {
-  direction: ltr !important;
+main {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 5px;
+  color: var(--accent);
+  text-align: right;
+}
+
+.sub {
+  font-size: 14px;
+  color: var(--mute);
+  margin-bottom: 20px;
+  text-align: right;
+}
+
+/* شريط التحكم والأزرار مصطفة من اليسار لليمين */
+.bar {
   display: flex;
-  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
+  background: var(--card-bg);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 15px;
+  direction: ltr;
+  justify-content: flex-start;
+}
+
+.bar select, .bar button, .bar label {
+  background: #0f172a;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  direction: rtl;
+}
+
+.bar button:hover {
+  border-color: var(--accent);
+}
+
+/* بطاقة عرض الآيات القرآنية (من اليمين لليسار للقراءة الصحيحة) */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  font-family: 'Amiri Quran', serif;
+  font-size: 28px;
+  line-height: 2.2;
+  text-align: right;
+  direction: rtl;
+  margin-top: 15px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* إحصائيات التطبيق */
+.stats {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+  direction: ltr;
+  justify-content: flex-start;
+}
+
+.stat {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  padding: 10px 20px;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 80px;
+}
+
+.stat b {
+  display: block;
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.stat span {
+  font-size: 12px;
+  color: var(--mute);
+}
+
+#msg {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  text-align: right;
+  direction: rtl;
+  font-size: 14px;
+}
+
+#gauge {
+  background: var(--border);
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.gb {
+  background: var(--accent);
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease;
 }
