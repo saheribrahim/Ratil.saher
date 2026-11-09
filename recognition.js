@@ -1,10 +1,15 @@
-// Recognition matching: Exact Tarteel-like tuning for Ratil.saher
+// ============================================================================
+// Ratil.saher - Standalone In-Browser Quran AI Recognition Engine (No API needed)
+// ============================================================================
+
+// 1. معايير المطابقة المرنة جداً (Tarteel-style thresholds)
 const TH = { 
-  strict: [.70, .52], // نسبة التطابق القياسية والمريحة (مطابقة لمعايير Tarteel)
+  strict: [.70, .52], // المعيار الفائق لسلاسة القراءة ومنع التوقف المزعج
   normal: [.60, .42], 
   lenient: [.50, .32] 
 };
 
+// 2. الحروف المقطعة والسور الخاصة بها
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
 ]);
@@ -23,7 +28,6 @@ function isMuq(j) {
 }
 
 const sq = t => t.replace(/(.)\1+/g, "$1");
-
 const ALL_NAMES = new Set(Object.values(LETTER_NAMES).flat().filter(x => x.length > 1).map(sq));
 const nameOK = (tok, names) => names.includes(tok) ||
   (!ALL_NAMES.has(tok) && names.some(nm => nm.length >= 2 && tok.length >= 2 && sim(tok, nm) >= .52));
@@ -59,6 +63,7 @@ function muqMatch(rw, i, n) {
 
 const forced = new Set();
 
+// 3. معالج النصوص القرآنية والتشكيل (الوقف والوصل والمدود)
 function normalizeArabic(str, preserveTashkeel = false) {
   if (!str) return "";
   let cleaned = str.trim();
@@ -71,7 +76,7 @@ function normalizeArabic(str, preserveTashkeel = false) {
     .replace(/[إأآٱاىوؤيئ]/g, m => ({'إ':'ا','أ':'ا','آ':'ا','ٱ':'ا','ى':'ا','و':'و','ؤ':'و','ي':'ي','ئ':'ي'}[m]))
     .replace(/ة/g, "ه")
     .replace(/ـ/g, "")
-    .replace(/([اوي])\1+/g, "$1") // مرونة تامية مع المدود وحروف اللين
+    .replace(/([اوي])\1+/g, "$1") // معالجة المدود الصوتية بمرونة تامة
     .trim();
 
   const sunLetters = /[تثدذرزسصضطظلن]/;
@@ -100,6 +105,7 @@ function enhancedSim(w1, w2) {
   );
 }
 
+// 4. خوارزمية التتبع التلقائي والمطابقة الفورية
 function trial(rw) {
   const [okT, nearT] = TH.strict;
   const s = baseSt.slice(), h = hd.slice(); let p = basePos;
@@ -180,6 +186,61 @@ function alignBest(cands) {
   if (b) { st = b.s; pos = b.p; hd = b.h; }
   render();
 }
+
+// 5. محرك الاستماع التلقائي والمستمر داخل المتصفح (مستقل ومحتوى داخل الكود)
+let internalRecognizer = null;
+
+function initLocalAIRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    console.error("متصفحك لا يدعم محرك الاستماع المحلي.");
+    return;
+  }
+
+  internalRecognizer = new SpeechRecognition();
+  internalRecognizer.continuous = true;
+  internalRecognizer.interimResults = true;
+  internalRecognizer.lang = "ar-SA";
+
+  internalRecognizer.onresult = (event) => {
+    let candidates = [];
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      const transcript = event.results[i][0].transcript.trim();
+      if (transcript) {
+        candidates.push(transcript.split(/\s+/));
+      }
+    }
+    if (candidates.length > 0) {
+      alignBest(candidates);
+    }
+  };
+
+  internalRecognizer.onerror = (err) => {
+    console.warn("إعادة تشغيل المحرك المحلي تلقائياً...", err);
+  };
+
+  internalRecognizer.onend = () => {
+    // إبقاء المحرك يعمل دائماً وبشكل مستمر أثناء التلاوة
+    if (window.isListeningActive) {
+      internalRecognizer.start();
+    }
+  };
+
+  window.isListeningActive = true;
+  internalRecognizer.start();
+}
+
+function stopLocalAIRecognition() {
+  window.isListeningActive = false;
+  if (internalRecognizer) {
+    internalRecognizer.stop();
+  }
+}
+
+// تشغيل محرك الاستماع المحلي تلقائياً عند تحميل الكود
+document.addEventListener("DOMContentLoaded", () => {
+  initLocalAIRecognition();
+});
 
 function htmlOf(i) {
   const w = words[i];
