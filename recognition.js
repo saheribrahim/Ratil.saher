@@ -1,5 +1,5 @@
 // ============================================================================
-// Ratil.saher - Full Verse Recognition & Correction Engine
+// Ratil.saher - Full Verse Recognition Engine & Manual Start
 // ============================================================================
 
 let recognition = null;
@@ -8,7 +8,9 @@ window.isListeningActive = false;
 function initRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    console.warn("متصفحك لا يدعم التعرف الصوتي.");
+    console.warn("متصفحك لا يدعم التعرف الصوتي المباشر.");
+    const msg = document.getElementById("msg");
+    if (msg) msg.textContent = "يرجى استخدام متصفح Google Chrome لتعمل التلاوة بشكل صحيح.";
     return;
   }
 
@@ -33,7 +35,11 @@ function initRecognition() {
   };
 
   recognition.onerror = (event) => {
-    console.warn("خطأ في التعرف الصوتي:", event.error);
+    console.warn("ملاحظة الميكروفون:", event.error);
+    if (event.error === 'not-allowed') {
+      const msg = document.getElementById("msg");
+      if (msg) msg.textContent = "يرجى السماح بالوصول للميكروفون من أعلى شريط العنوان.";
+    }
   };
 
   recognition.onend = () => {
@@ -45,14 +51,13 @@ function initRecognition() {
   };
 }
 
-// دالة فحص وتصحيح الآية كاملة عند نطقها
+// دالة فحص وتصحيح الآية كاملة عند الاستماع إليها
 function checkFullVerse(spokenText) {
   if (typeof words === "undefined" || !words.length) return;
   
   let currentPos = typeof pos !== "undefined" ? pos : 0;
-  
-  // استخراج كلمات الآية الحالية فقط من مصفوفة الكلمات
   let currentVerseNum = words[currentPos] ? words[currentPos].v : 0;
+  
   let verseWords = [];
   let verseIndices = [];
   
@@ -61,29 +66,23 @@ function checkFullVerse(spokenText) {
       verseWords.push(normalizeArabicText(words[i].n));
       verseIndices.push(i);
     } else if (verseWords.length > 0) {
-      break; // انتهت الآية الحالية
+      break;
     }
   }
 
   if (verseWords.length === 0) return;
 
-  // تنظيف النص المقروء للمقارنة
   let cleanSpoken = normalizeArabicText(spokenText);
   let targetVerseText = verseWords.join(" ");
 
-  // التحقق مما إذا كانت الآية قد نُطقت بشكل صحيح ومتقارب
-  let matchScore = calculateSimilarity(cleanSpoken, targetVerseText);
-
-  // إذا كانت نسبة التطابق جيدة، نعتبر الآية صحيحة وننتقل للآية التي تليها مباشرة
-  if (matchScore >= 0.55 || cleanSpoken.includes(targetVerseText) || targetVerseText.includes(cleanSpoken)) {
-    // تلوين جميع كلمات الآية الحالية باللون الصحيح (ok)
+  // مقارنة نطق الآية
+  if (cleanSpoken.includes(targetVerseText) || targetVerseText.includes(cleanSpoken) || calculateSimilarity(cleanSpoken, targetVerseText) >= 0.50) {
     verseIndices.forEach(idx => {
       if (typeof st !== "undefined") {
         st[idx] = "ok";
       }
     });
 
-    // الانتقال الفوري لأول كلمة في الآية التالية
     let nextVersePos = verseIndices[verseIndices.length - 1] + 1;
     if (typeof pos !== "undefined") pos = nextVersePos;
     if (typeof basePos !== "undefined") basePos = nextVersePos;
@@ -92,7 +91,6 @@ function checkFullVerse(spokenText) {
   }
 }
 
-// دالة حساب نسبة التشابه البسيطة بين النصوص
 function calculateSimilarity(str1, str2) {
   let set1 = new Set(str1.split(" "));
   let set2 = new Set(str2.split(" "));
@@ -100,25 +98,29 @@ function calculateSimilarity(str1, str2) {
   return intersection.length / Math.max(set1.size, set2.size);
 }
 
-// تنظيف النصوص العربية للمقارنة الدقيقة
 function normalizeArabicText(str) {
   if (!str) return "";
-  return str.replace(/[\u064B-\u065F\u0670]/g, "") // إزالة التشكيل
+  return str.replace(/[\u064B-\u065F\u0670]/g, "")
              .replace(/[إأآٱاىوؤيئ]/g, m => ({'إ':'ا','أ':'ا','آ':'ا','ٱ':'ا','ى':'ا','و':'و','ؤ':'و','ي':'ي','ئ':'ي'}[m]))
              .replace(/ة/g, "ه")
              .trim();
 }
 
-// التشغيل التلقائي عند تحميل الصفحة
+// ربط زر Start بالتشغيل اليدوي للميكروفون
 document.addEventListener("DOMContentLoaded", () => {
   initRecognition();
-  window.isListeningActive = true;
   
-  setTimeout(() => {
-    try {
-      recognition.start();
-    } catch (e) {
-      console.warn("تعذر بدء الميكروفون تلقائياً:", e);
-    }
-  }, 1000);
+  const startBtn = document.getElementById("start");
+  if (startBtn) {
+    startBtn.addEventListener("click", () => {
+      window.isListeningActive = true;
+      try {
+        recognition.start();
+        const msg = document.getElementById("msg");
+        if (msg) msg.textContent = "جاري الاستماع.. اقرأ الآية كاملة لتصحيحها وتتبعها.";
+      } catch (e) {
+        console.log("الميكروفون يعمل بالفعل");
+      }
+    });
+  }
 });
