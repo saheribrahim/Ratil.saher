@@ -1,4 +1,4 @@
-// Recognition matching: Strict Tashkeel & Connected Muqatta'ah matching for Ratil.saher
+// Recognition matching: Strict Tashkeel, State Locking, Connected Muqatta'ah & Normal Hide Mode for Ratil.saher
 const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
 
 // ---------- Huruf Muqatta'ah ----------
@@ -28,8 +28,8 @@ const nameOK = (tok, names) => names.includes(tok) ||
 // Strict connected Muqatta'ah matcher
 function muqMatch(rw, i, n) {
   if (!rw[i]) return 0;
-  const targetNorm = normalizeArabic(n);
-  const inputNorm = normalizeArabic(rw[i]);
+  const targetNorm = normalizeArabic(n, false);
+  const inputNorm = normalizeArabic(rw[i], false);
 
   if (inputNorm === targetNorm || sq(rw[i]) === sq(n)) return 1;
 
@@ -57,13 +57,12 @@ function muqMatch(rw, i, n) {
 
 const forced = new Set();
 
-// Normalization function that preserves Tashkeel when needed, or compares with strict accuracy
 function normalizeArabic(str, preserveTashkeel = false) {
   if (!str) return "";
   let cleaned = str.trim();
   
   if (!preserveTashkeel) {
-    cleaned = cleaned.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, ""); // Remove Tashkeel only if requested
+    cleaned = cleaned.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "");
   }
 
   let normalized = cleaned
@@ -84,12 +83,11 @@ function normalizeArabic(str, preserveTashkeel = false) {
 
 function enhancedSim(w1, w2) {
   if (!w1 || !w2) return 0;
-  // Compare both with and without Tashkeel to ensure exact harka match rewards higher score
   const aFull = normalizeArabic(w1, true), bFull = normalizeArabic(w2, true);
   if (aFull === bFull) return 1.0;
 
   const a = normalizeArabic(w1, false), b = normalizeArabic(w2, false);
-  if (a === b) return 0.95; // Match without tashkeel gets slightly lower score to prioritize harka correctness
+  if (a === b) return 0.95;
 
   const strip = x => x.replace(/[ا\u0621]/g, "");
   const stretch = x => x.replace(/([اوي])\1+/g, "$1");
@@ -157,7 +155,6 @@ function trial(rw) {
 
     for (let k = p; k < hit; k++) s[k] = "miss";
     
-    // Strict locking: only green "ok" if harka & letters match precisely, otherwise lock as miss
     const lab = score >= okT ? "ok" : "miss"; 
     
     if (used === -2) {
@@ -201,7 +198,16 @@ function alignBest(cands) {
 
 function htmlOf(i) {
   const w = words[i];
-  if ($("tjw").checked) {
+  
+  // تفعيل إخفاء الكلمات في وضع القراءة العادي فور تفعيل زر hideNormal وتحديث العرض عند نطقها
+  const hideCheckbox = document.getElementById("hideNormal");
+  const isNormalHide = hideCheckbox && hideCheckbox.checked;
+  
+  if (isNormalHide && st[i] !== "ok") {
+    return '<span style="filter: blur(5px); opacity: 0.2; user-select: none; background: rgba(0,0,0,0.05); border-radius: 4px; padding: 0 4px;">' + w.t + '</span>';
+  }
+
+  if ($("tjw") && $("tjw").checked) {
     const nx = words[i + 1] && words[i + 1].v === w.v ? words[i + 1].t : "";
     return tj(w.t, nx);
   }
@@ -209,4 +215,17 @@ function htmlOf(i) {
 }
 
 const fl = t => ((t.match(/[\u0621-\u064A\u0671][^\u0621-\u064A\u0671]*/) || [t])[0]) + "…";
-$("mMask").onchange = render;
+
+// ربط زر إخفاء الكلمات بدالة التحديث المباشر للرسم
+document.addEventListener("DOMContentLoaded", () => {
+  const hideNormalEl = document.getElementById("hideNormal");
+  if (hideNormalEl) {
+    hideNormalEl.onchange = () => {
+      if (typeof render === "function") render();
+    };
+  }
+});
+
+if ($("mMask")) {
+  $("mMask").onchange = render;
+}
