@@ -1,5 +1,9 @@
-// Recognition matching with integrated Tajweed & Tashkeel validation for Ratil.saher
-const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
+// Recognition matching: Strict Tajweed & Tashkeel validation at 90% accuracy for Ratil.saher
+const TH = { 
+  strict: [.90, .75], // تم ضبط دقة التطابق الصارم على 90% للتشكيل والتجويد
+  normal: [.78, .58], 
+  lenient: [.65, .45] 
+};
 
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
@@ -93,13 +97,13 @@ function enhancedSim(w1, w2) {
   return Math.max(
     sim(w1, w2), 
     sim(a, b), 
-    0.96 * sim(stretch(a), stretch(b)), 
-    0.92 * sim(strip(stretch(a)), stretch(b))
+    0.95 * sim(stretch(a), stretch(b)), 
+    0.90 * sim(strip(stretch(a)), stretch(b))
   );
 }
 
 function trial(rw) {
-  const [okT, nearT] = TH.strict;
+  const [okT, nearT] = TH.strict; // هنا سيتم تطبيق معيار الـ 90%
   const s = baseSt.slice(), h = hd.slice(); let p = basePos;
   for (let k = basePos; k < h.length; k++) h[k] = "";
   const end = Math.min(lim, words.length);
@@ -126,7 +130,7 @@ function trial(rw) {
         }
         if (j + 1 < verseEnd && !isMuq(j + 1)) {
           const m = enhancedSim(rw[i], words[j].n + words[j + 1].n);
-          if (m >= .80 && m > sc) { sc = m; u = -2; }
+          if (m >= .85 && m > sc) { sc = m; u = -2; }
         }
       }
       if (sc >= nearT && sc > score + (j > p ? .05 : 0)) {
@@ -179,7 +183,6 @@ function alignBest(cands) {
   render();
 }
 
-// دالة عرض الكلمات مع تطبيق تلوين أحكام التجويد والتشكيل عند التفعيل
 function htmlOf(i) {
   const w = words[i];
   const hideCheckbox = document.getElementById("hideNormal");
