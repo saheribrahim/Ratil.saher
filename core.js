@@ -1,5 +1,5 @@
 // ============================================================================
-// Ratil.saher - Core JavaScript (Final & Optimized)
+// Ratil.saher - Core JavaScript (Fixed: No auto-coloring)
 // ============================================================================
 
 const $ = id => document.getElementById(id);
@@ -27,7 +27,7 @@ function htmlOf(i) {
   return words[i] ? words[i].t : "";
 }
 
-// مطابقة متتابعة صارمة تبدأ تسلسلياً من الموضع الحالي (pos)
+// دالة المطابقة التسلسلية الصارمة
 function alignBest(cands) {
   if (!words.length || !cands || !cands.length) return;
   for (const tokens of cands) {
@@ -37,7 +37,7 @@ function alignBest(cands) {
     let tIdx = 0;
     
     while (p < words.length && tIdx < tokens.length) {
-      if (sim(words[p].n, tokens[tIdx]) >= 0.65) {
+      if (sim(words[p].n, tokens[tIdx]) >= 0.68) {
         st[p] = "ok";
         pos = p + 1;
         matched = true;
@@ -88,10 +88,7 @@ function load() {
   });
   
   st = words.map(() => "todo");
-  hd = words.map(() => "");
   pos = 0;
-  if (typeof paint === "function") paint();
-  if (typeof memReset === "function") memReset();
   render();
 }
 
@@ -99,21 +96,9 @@ function render() {
   let ok = 0, near = 0, miss = 0;
   
   words.forEach((w, i) => {
-    const hintIdx = typeof window.hintIdx !== "undefined" ? window.hintIdx : -1;
-    const memOn = typeof window.memOn !== "undefined" ? window.memOn : false;
-
-    w.el.className = "w " + st[i] + (i === pos && listening ? " cur" : "") + (i === hintIdx ? " hint" : "");
-    
-    if (memOn && $("mMask") && $("mMask").value === "fl") {
-      const mk = st[i] === "todo" && i !== hintIdx;
-      if (w.m !== mk) {
-        w.m = mk;
-        w.el.innerHTML = mk && typeof fl === "function" ? fl(w.t) : htmlOf(i);
-      }
-    } else {
-      if (w.m) { w.m = false; }
-      w.el.innerHTML = htmlOf(i);
-    }
+    // تلوين الكلمة الحالية (.cur) فقط إذا كان الاستماع يعمل، وإلا تبقى الكلمات طبيعية
+    w.el.className = "w " + st[i] + (i === pos && listening ? " cur" : "");
+    w.el.innerHTML = htmlOf(i);
 
     if (st[i] === "ok") ok++;
     else if (st[i] === "near") near++;
@@ -164,8 +149,6 @@ function start() {
 }
 
 function spawn(SR) {
-  baseSt = st.slice();
-  basePos = pos;
   rec = new SR();
   rec.lang = "ar-SA";
   rec.continuous = true;
@@ -189,17 +172,7 @@ function spawn(SR) {
   };
   
   rec.onerror = e => {
-    const fatal = {
-      "not-allowed": "Microphone is blocked. Allow the mic for this page, or tap “Open in browser” at the top and try again there.",
-      "service-not-allowed": "Speech recognition is blocked here. Tap “Open in browser” at the top (use Chrome or Safari).",
-      "audio-capture": "No microphone was found.",
-      "network": "Speech recognition needs an internet connection.",
-      "language-not-supported": "Arabic recognition isn’t available on this device."
-    };
-    if (fatal[e.error]) {
-      msg(fatal[e.error], true);
-      stop();
-    } else if (e.error !== "no-speech" && e.error !== "aborted") {
+    if (e.error !== "no-speech" && e.error !== "aborted") {
       msg("Recognition error: " + e.error, true);
     }
   };
@@ -233,10 +206,10 @@ function stop() {
   if (pos >= words.length) msg("Finished. Tap Reset to try again.");
 }
 
-// التحكم المتبادل الحصري: منع تفعيل وضع الحفظ ووضع إخفاء للقراءة معاً في نفس الوقت
+// التحكم المتبادل الحصري للأزرار
 document.addEventListener("DOMContentLoaded", () => {
   const readingHideToggle = $("readingHideToggle");
-  const memToggleEl = $("hide"); // زر وضع الحفظ Memorization mode
+  const memToggleEl = $("hide");
 
   if (readingHideToggle && memToggleEl) {
     readingHideToggle.onchange = () => {
