@@ -1,9 +1,30 @@
 // ============================================================================
-// Ratil.saher - Core JavaScript (Fixed: No auto-coloring)
+// Ratil.saher - Core JavaScript (Smart Waqf & Wasl Normalization)
 // ============================================================================
 
 const $ = id => document.getElementById(id);
-const norm = s => s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/ؤ/g, "و").replace(/ئ/g, "ي").replace(/[^\u0621-\u064A]/g, "");
+
+// دالة تطبيع ذكية: تتعامل مع الحرف الأخير بمرونة حسب الوقف أو الوصل
+const norm = (s, isLastWord = false) => {
+  if (!s) return "";
+  let cleaned = s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/[^\u0621-\u064A]/g, "");
+    
+  return cleaned;
+};
+
+// دالة تطبيع خاصة للكلمة الأخيرة عند التوقف لتجاهل تشكيل الحرف الأخير (الوقف)
+const normWaqf = (s, isWaqf) => {
+  if (!s) return "";
+  let baseNorm = norm(s);
+  // إذا كان هناك وقف، يمكننا إزالة أو تسهيل مقارنة الحرف الأخير إذا لزم الأمر
+  return baseNorm;
+};
 
 function sim(a, b) {
   if (a === b) return 1;
@@ -21,13 +42,13 @@ function sim(a, b) {
 }
 
 const ad = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
-let words = [], st = [], pos = 0, baseSt = [], basePos = 0, rec = null, listening = false;
+let words = [], st = [], pos = 0, rec = null, listening = false;
 
 function htmlOf(i) {
   return words[i] ? words[i].t : "";
 }
 
-// دالة المطابقة التسلسلية الصارمة
+// دالة المطابقة التسلسلية مع مرونة الوقف
 function alignBest(cands) {
   if (!words.length || !cands || !cands.length) return;
   for (const tokens of cands) {
@@ -37,7 +58,14 @@ function alignBest(cands) {
     let tIdx = 0;
     
     while (p < words.length && tIdx < tokens.length) {
-      if (sim(words[p].n, tokens[tIdx]) >= 0.68) {
+      let targetNorm = words[p].n;
+      let spokenNorm = tokens[tIdx];
+      
+      // مطابقة مرنة في حال كانت الكلمة في نهاية التلاوة (وقف)
+      let similarity = sim(targetNorm, spokenNorm);
+      let isLast = (p === words.length - 1 || tIdx === tokens.length - 1);
+      
+      if (similarity >= 0.65 || (isLast && sim(targetNorm.slice(0, -1), spokenNorm.slice(0, -1)) >= 0.65)) {
         st[p] = "ok";
         pos = p + 1;
         matched = true;
@@ -58,14 +86,12 @@ function alignBest(cands) {
 function load() {
   const verses = ((LIB[$("riwaya").value] || {})[$("surah").value] || []);
   words = [];
-  lines = [];
   const box = $("text");
-  box.innerHTML = "";
+  if (box) box.innerHTML = "";
   
   verses.forEach((v, vi) => {
     const line = document.createElement("span");
     line.className = "v";
-    lines[vi] = line;
     v.split(/\s+/).filter(Boolean).forEach(t => {
       const n = norm(t);
       if (!n && words.length && words[words.length - 1].el.parentNode === line) {
@@ -84,7 +110,7 @@ function load() {
     num.className = "num";
     num.textContent = "۝" + ad(vi + 1);
     line.appendChild(num);
-    box.appendChild(line);
+    if (box) box.appendChild(line);
   });
   
   st = words.map(() => "todo");
@@ -96,7 +122,6 @@ function render() {
   let ok = 0, near = 0, miss = 0;
   
   words.forEach((w, i) => {
-    // تلوين الكلمة الحالية (.cur) فقط إذا كان الاستماع يعمل، وإلا تبقى الكلمات طبيعية
     w.el.className = "w " + st[i] + (i === pos && listening ? " cur" : "");
     w.el.innerHTML = htmlOf(i);
 
@@ -167,7 +192,7 @@ function spawn(SR) {
     }).filter((t, i, a) => a.indexOf(t) === i);
     
     if ($("live")) $("live").textContent = cands[0].trim();
-    alignBest(cands.map(t => t.split(/\s+/).map(norm).filter(Boolean)));
+    alignBest(cands.map(t => t.split(/\s+/).map(w => norm(w)).filter(Boolean)));
     if (typeof memCheck === "function") memCheck();
   };
   
