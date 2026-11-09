@@ -199,12 +199,12 @@ function alignBest(cands) {
 function htmlOf(i) {
   const w = words[i];
   
-  // تفعيل إخفاء الكلمات في وضع القراءة العادي فور تفعيل زر hideNormal وتحديث العرض عند نطقها
+  // التحقق الفعّال من زر إخفاء الكلمات العادي وإخفاء الكلمة إذا لم يتم نطقها بشكل صحيح (ok)
   const hideCheckbox = document.getElementById("hideNormal");
   const isNormalHide = hideCheckbox && hideCheckbox.checked;
   
   if (isNormalHide && st[i] !== "ok") {
-    return '<span style="filter: blur(5px); opacity: 0.2; user-select: none; background: rgba(0,0,0,0.05); border-radius: 4px; padding: 0 4px;">' + w.t + '</span>';
+    return '<span style="filter: blur(6px); opacity: 0.15; user-select: none; background: rgba(255,255,255,0.08); border-radius: 4px; padding: 0 6px;">ُٔـ</span>';
   }
 
   if ($("tjw") && $("tjw").checked) {
@@ -216,7 +216,7 @@ function htmlOf(i) {
 
 const fl = t => ((t.match(/[\u0621-\u064A\u0671][^\u0621-\u064A\u0671]*/) || [t])[0]) + "…";
 
-// ربط زر إخفاء الكلمات بدالة التحديث المباشر للرسم
+// تفعيل استجابة التبديل الفورية لزر إخفاء الكلمات
 document.addEventListener("DOMContentLoaded", () => {
   const hideNormalEl = document.getElementById("hideNormal");
   if (hideNormalEl) {
