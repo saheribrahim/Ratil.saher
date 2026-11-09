@@ -77,3 +77,5 @@ body.reading-hide #text .w.cur {
 .tabs button{flex:1}
 #aMsg{font-size:13px;color:var(--mute);min-height:18px}
 #aMsg.err{color:var(--miss)}
+#aMsg{font-size:13px;color:var(--mute);min-height:18px}
+#aMsg.err{color:var(--miss)}
