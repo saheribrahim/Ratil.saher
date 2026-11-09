@@ -1,0 +1,2 @@
+// Start the app
+load();
