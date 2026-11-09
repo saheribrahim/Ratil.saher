@@ -1,6 +1,7 @@
-// Recognition matching: Tarteel-style strict Tashkeel, State Locking & Connected Muqatta'ah Engine for Ratil.saher
+// Recognition matching: Strict Tashkeel, State Locking, Connected Muqatta'ah & Flexible Mad/Stretch Handling for Ratil.saher
 const TH = { strict: [.92, .80], normal: [.78, .58], lenient: [.65, .45] };
 
+// ---------- Huruf Muqatta'ah ----------
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
 ]);
@@ -64,12 +65,13 @@ function normalizeArabic(str, preserveTashkeel = false) {
   }
 
   let normalized = cleaned
-    .replace(/[إأآٱا]/g, "ا")
-    .replace(/ؤ/g, "و").replace(/ئ/g, "ي")
+    .replace(/[إأآٱاى]/g, "ا")
+    .replace(/ؤو/g, "و").replace(/ؤ/g, "و")
+    .replace(/ئي/g, "ي").replace(/ئ/g, "ي")
     .replace(/ة/g, "ه")
-    .replace(/ى/g, "ي")
     .replace(/ـ/g, "")
-    .replace(/(.)\1{2,}/g, "$1$1")
+    // دمج وتطبيع حروف المد المكررة أو الممتدة لتفادي مشاكل النطق الصوتي
+    .replace(/([اوي])\1+/g, "$1")
     .trim();
 
   const sunLetters = /[تثدذرزسصضطظلن]/;
@@ -79,6 +81,7 @@ function normalizeArabic(str, preserveTashkeel = false) {
   return normalized;
 }
 
+// دالة محسنة تدعم دمج الكلمات الممتدة أو التي تحتوي على مدود متصلة
 function enhancedSim(w1, w2) {
   if (!w1 || !w2) return 0;
   const aFull = normalizeArabic(w1, true), bFull = normalizeArabic(w2, true);
@@ -88,8 +91,35 @@ function enhancedSim(w1, w2) {
   if (a === b) return 0.95;
 
   const strip = x => x.replace(/[ا\u0621]/g, "");
-  const stretch = x => x.replace(/([اوي])\1+/g, "$1");
-  return Math.max(sim(w1, w2), sim(a, b), 0.95 * sim(stretch(a), stretch(b)), 0.90 * sim(strip(stretch(a)), stretch(b)));
+  const stretch = x => x.replace(/([اوي])+/g, "$1"); // التعامل المرن مع المدود الطويلة
+  
+  return Math.max(
+    sim(w1, w2), 
+    sim(a, b), 
+    0.96 * sim(stretch(a), stretch(b)), 
+    0.92 * sim(strip(stretch(a)), strip(stretch(b)))
+  );
+}
+
+function verseIsRepeatedCorrectly(start, end, rw, threshold) {
+  for (let i = 0; i < rw.length; i++) {
+    let cursor = i, matched = true;
+    for (let j = start; j < end; j++) {
+      const w = words[j];
+      if (!w.n) { matched = false; break; }
+      let best = -1, bestScore = 0, bestUsed = 1;
+      for (let q = cursor; q < Math.min(cursor + 5, rw.length); q++) {
+        let sc = 0, u = 1;
+        if (isMuq(j)) { const n = muqMatch(rw, q, w.n); if (n > 0) { sc = 1; u = n; } }
+        else sc = enhancedSim(w.n, rw[q]);
+        if (sc > bestScore) { bestScore = sc; best = q; bestUsed = u; }
+      }
+      if (best < 0 || bestScore < threshold) { matched = false; break; }
+      cursor = best + bestUsed;
+    }
+    if (matched) return true;
+  }
+  return false;
 }
 
 function trial(rw) {
@@ -114,10 +144,13 @@ function trial(rw) {
         if (n > 0) { sc = 1; u = n; }
       } else {
         sc = enhancedSim(rw[i], words[j].n);
+        
+        // دمج كلمتين متتاليتين في النطق (لتلافي مشاكل المد أو الوصل مثل: صراط الذين)
         if (i + 1 < rw.length) {
           const m = enhancedSim(rw[i] + rw[i + 1], words[j].n);
           if (m > sc + .05) { sc = m; u = 2; }
         }
+        // دمج كلمتين في المصحف لتطابق نطقهما ككلمة واحدة ممدودة
         if (j + 1 < verseEnd && !isMuq(j + 1)) {
           const m = enhancedSim(rw[i], words[j].n + words[j + 1].n);
           if (m >= .80 && m > sc) { sc = m; u = -2; }
@@ -175,7 +208,6 @@ function alignBest(cands) {
 
 function htmlOf(i) {
   const w = words[i];
-  
   const hideCheckbox = document.getElementById("hideNormal");
   const isNormalHide = hideCheckbox && hideCheckbox.checked;
   
