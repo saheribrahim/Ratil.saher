@@ -1,4 +1,7 @@
-// Core: helpers, state, load/render, microphone start/stop for Ratil.saher
+// ============================================================================
+// Ratil.saher - Core JavaScript (Fixed & Self-Contained Helpers)
+// ============================================================================
+
 const $ = id => document.getElementById(id);
 const norm = s => s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/ؤ/g, "و").replace(/ئ/g, "ي").replace(/[^\u0621-\u064A]/g, "");
 
@@ -19,6 +22,37 @@ function sim(a, b) {
 
 const ad = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
 let words = [], st = [], pos = 0, baseSt = [], basePos = 0, rec = null, listening = false;
+
+// دالة إرجاع نص الكلمة لتجنب خطأ htmlOf
+function htmlOf(i) {
+  return words[i] ? words[i].t : "";
+}
+
+// دالة مطابقة ومحاذاة النطق الصوتي مع الكلمات لتجنب خطأ alignBest
+function alignBest(cands) {
+  if (!words.length || !cands || !cands.length) return;
+  for (const tokens of cands) {
+    if (!tokens.length) continue;
+    let matched = false;
+    let p = pos;
+    let tIdx = 0;
+    while (p < words.length && tIdx < tokens.length) {
+      if (sim(words[p].n, tokens[tIdx]) >= 0.65) {
+        st[p] = "ok";
+        pos = Math.max(pos, p + 1);
+        matched = true;
+        tIdx++;
+      } else if (tIdx > 0) {
+        tIdx++;
+      }
+      p++;
+    }
+    if (matched) {
+      render();
+      break;
+    }
+  }
+}
 
 function load() {
   const verses = ((LIB[$("riwaya").value] || {})[$("surah").value] || []);
@@ -55,8 +89,8 @@ function load() {
   st = words.map(() => "todo");
   hd = words.map(() => "");
   pos = 0;
-  paint();
-  memReset();
+  if (typeof paint === "function") paint();
+  if (typeof memReset === "function") memReset();
   render();
 }
 
@@ -67,16 +101,18 @@ function render() {
   const isNormalHide = hideNormalEl && hideNormalEl.checked;
 
   words.forEach((w, i) => {
+    const hintIdx = typeof window.hintIdx !== "undefined" ? window.hintIdx : -1;
+    const memOn = typeof window.memOn !== "undefined" ? window.memOn : false;
+
     w.el.className = "w " + st[i] + (i === pos && listening ? " cur" : "") + (i === hintIdx ? " hint" : "");
     
-    if (memOn && $("mMask").value === "fl") {
+    if (memOn && $("mMask") && $("mMask").value === "fl") {
       const mk = st[i] === "todo" && i !== hintIdx;
       if (w.m !== mk) {
         w.m = mk;
-        w.el.innerHTML = mk ? fl(w.t) : htmlOf(i);
+        w.el.innerHTML = mk && typeof fl === "function" ? fl(w.t) : htmlOf(i);
       }
     } else if (isNormalHide && st[i] !== "ok") {
-      // إخفاء الكلمات في الوضع العادي بتمييز ضبابي لحين نطقها بصورة صحيحة
       w.el.innerHTML = '<span style="filter: blur(6px); opacity: 0.15; user-select: none; background: rgba(255,255,255,0.08); border-radius: 4px; padding: 0 6px;">ُٔـ</span>';
     } else {
       if (w.m) { w.m = false; }
@@ -88,27 +124,32 @@ function render() {
     else if (st[i] === "miss") miss++;
   });
 
-  $("sOk").textContent = ok;
-  $("sNear").textContent = near;
-  $("sMiss").textContent = miss;
-  $("sPct").textContent = (words.length ? Math.round(pos / words.length * 100) : 0) + "%";
+  if ($("sOk")) $("sOk").textContent = ok;
+  if ($("sNear")) $("sNear").textContent = near;
+  if ($("sMiss")) $("sMiss").textContent = miss;
+  if ($("sPct")) $("sPct").textContent = (words.length ? Math.round(pos / words.length * 100) : 0) + "%";
   
   const tot = ok + near + miss;
   const acc = tot ? Math.round((ok + near * .5) / tot * 100) : 0;
-  $("gm").style.left = (tot ? acc : 0) + "%";
-  $("gt").textContent = !tot ? "ابدأ التلاوة لتظهر نتيجتك · Start reciting to see your score" : acc >= 85 ? "🟢 " + acc + "% ممتاز — استمر · Excellent" : acc >= 60 ? "🟡 " + acc + "% جيد — راجع الكلمات الحمراء · Good, review the red words" : "🔴 " + acc + "% حسّن نفسك — راجع وكرّر · Keep practicing";
+  if ($("gm")) $("gm").style.left = (tot ? acc : 0) + "%";
+  if ($("gt")) $("gt").textContent = !tot ? "ابدأ التلاوة لتظهر نتيجتك · Start reciting to see your score" : acc >= 85 ? "🟢 " + acc + "% ممتاز — استمر · Excellent" : acc >= 60 ? "🟡 " + acc + "% جيد — راجع الكلمات الحمراء · Good, review the red words" : "🔴 " + acc + "% حسّن نفسك — راجع وكرّر · Keep practicing";
   
   if (listening && words[pos]) words[pos].el.scrollIntoView({ block: "center", behavior: "smooth" });
   
-  $("text").classList.toggle("mem", memOn);
-  $("text").classList.toggle("fl", $("mMask").value === "fl");
-  $("text").classList.toggle("tj", $("tjw").checked);
+  const memOn = typeof window.memOn !== "undefined" ? window.memOn : false;
+  if ($("text")) {
+    $("text").classList.toggle("mem", memOn);
+    if ($("mMask")) $("text").classList.toggle("fl", $("mMask").value === "fl");
+    if ($("tjw")) $("text").classList.toggle("tj", $("tjw").checked);
+  }
 }
 
 function msg(t, err) {
   const m = $("msg");
-  m.textContent = t;
-  m.className = err ? "err" : "";
+  if (m) {
+    m.textContent = t;
+    m.className = err ? "err" : "";
+  }
 }
 
 function start() {
@@ -118,14 +159,15 @@ function start() {
     return;
   }
   listening = true;
-  $("mic").textContent = "⏹ Stop";
-  $("mic").classList.add("rec");
+  if ($("mic")) {
+    $("mic").textContent = "⏹ Stop";
+    $("mic").classList.add("rec");
+  }
   msg("Listening… start reciting.");
   spawn(SR);
 }
 
 function spawn(SR) {
-  SRc = SR;
   baseSt = st.slice();
   basePos = pos;
   rec = new SR();
@@ -135,7 +177,7 @@ function spawn(SR) {
   rec.maxAlternatives = 3;
   
   rec.onresult = e => {
-    if (busy) return;
+    if (typeof busy !== "undefined" && busy) return;
     const cands = [0, 1, 2].map(k => {
       let t = "";
       for (let i = 0; i < e.results.length; i++) {
@@ -145,9 +187,9 @@ function spawn(SR) {
       return t;
     }).filter((t, i, a) => a.indexOf(t) === i);
     
-    $("live").textContent = cands[0].trim();
+    if ($("live")) $("live").textContent = cands[0].trim();
     alignBest(cands.map(t => t.split(/\s+/).map(norm).filter(Boolean)));
-    memCheck();
+    if (typeof memCheck === "function") memCheck();
   };
   
   rec.onerror = e => {
@@ -187,22 +229,24 @@ function stop() {
     rec.onend = null;
     try { rec.stop(); } catch (_) {}
   }
-  $("mic").textContent = "🎙 Start";
-  $("mic").classList.remove("rec");
+  if ($("mic")) {
+    $("mic").textContent = "🎙 Start";
+    $("mic").classList.remove("rec");
+  }
   render();
   if (pos >= words.length) msg("Finished. Tap Reset to try again.");
 }
 
-// التحكم المتبادل الحصري: منع تفعيل وضع الحفظ ووضع إخفاء الكلمات العادي معاً في نفس الوقت
+// التحكم المتبادل الحصري: منع تفعيل وضع الحفظ ووضع إخفاء الكلمات العادي معاً
 document.addEventListener("DOMContentLoaded", () => {
   const hideNormalEl = $("hideNormal");
-  const hideMemEl = $("hide"); // زر وضع الحفظ Memorization mode
+  const hideMemEl = $("hide");
 
   if (hideNormalEl && hideMemEl) {
     hideNormalEl.onchange = () => {
       if (hideNormalEl.checked) {
         hideMemEl.checked = false;
-        if (typeof memToggle === "function" && memOn) memToggle();
+        if (typeof memToggle === "function" && typeof memOn !== "undefined" && memOn) memToggle();
       }
       render();
     };
@@ -217,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-$("mic").onclick = () => listening ? stop() : start();
-$("reset").onclick = () => { stop(); $("live").textContent = ""; load(); msg("Reset. Tap Start when ready."); };
-$("hide").onchange = () => memToggle();
-$("surah").onchange = () => { stop(); $("live").textContent = ""; load(); };
+if ($("mic")) $("mic").onclick = () => listening ? stop() : start();
+if ($("reset")) $("reset").onclick = () => { stop(); if ($("live")) $("live").textContent = ""; load(); msg("Reset. Tap Start when ready."); };
+if ($("hide")) $("hide").onchange = () => { if (typeof memToggle === "function") memToggle(); };
+if ($("surah")) $("surah").onchange = () => { stop(); if ($("live")) $("live").textContent = ""; load(); };
