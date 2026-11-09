@@ -1,5 +1,5 @@
 // ============================================================================
-// Ratil.saher - Main JavaScript Controller (Complete & Updated)
+// Ratil.saher - Main JavaScript Controller (Complete Integration)
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   adminUsersScript.defer = true;
   document.body.appendChild(adminUsersScript);
 
-  // 3. ربط قائمة اختيار السورة لتحميلها وعرض الآيات فـوراً
+  // 3. ربط قائمة اختيار السورة لتحميلها وعرض الآيات فوراً عند الاختيار
   const surahSelect = document.getElementById("surah");
   if (surahSelect) {
     surahSelect.addEventListener("change", (e) => {
@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // تحميل السورة الأولى افتراضياً عند فتح التطبيق إذا لم تكن محملة
+  // تحميل سورة الفاتحة افتراضياً عند البدء إذا لم تكن محملة
   if (typeof loadSurah === "function" && surahSelect && !surahSelect.value) {
     loadSurah(1);
   }
@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 5. تفعيل وإلغاء وضع إخفاء الآيات للقراءة (المستقل عن الحفظ)
+  // 5. تفعيل وإلغاء وضع إخفاء الآيات للقراءة المستقل (Reading Hide)
   const readingHideToggle = document.getElementById("readingHideToggle");
   if (readingHideToggle) {
     readingHideToggle.addEventListener("change", (e) => {
@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 6. تفعيل وضع الحفظ الأساسي (Memorization Mode)
-  const memToggle = document.getElementById("hide"); // ارتباطاً بالـ ID الموجود في HTML لديك
+  const memToggle = document.getElementById("hide");
   if (memToggle) {
     memToggle.addEventListener("change", (e) => {
       if (e.target.checked) {
@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 7. تفعيل أحكام التجويد
+  // 7. تفعيل أحكام التجويد (Tajweed Colors)
   const tjToggle = document.getElementById("tjw");
   if (tjToggle) {
     tjToggle.addEventListener("change", (e) => {
