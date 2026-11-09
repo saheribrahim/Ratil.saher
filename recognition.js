@@ -1,15 +1,13 @@
 // ============================================================================
-// Ratil.saher - Standalone In-Browser Quran AI Recognition Engine (No API needed)
+// Ratil.saher - Auto-Start & Smart Mic Permission Engine (Tarteel-style)
 // ============================================================================
 
-// 1. معايير المطابقة المرنة جداً (Tarteel-style thresholds)
 const TH = { 
-  strict: [.70, .52], // المعيار الفائق لسلاسة القراءة ومنع التوقف المزعج
+  strict: [.70, .52], // سلاسة فائقة مطابقة لمعايير Tarteel
   normal: [.60, .42], 
   lenient: [.50, .32] 
 };
 
-// 2. الحروف المقطعة والسور الخاصة بها
 const MUQATTAAH_SET = new Set([
   "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
 ]);
@@ -63,7 +61,6 @@ function muqMatch(rw, i, n) {
 
 const forced = new Set();
 
-// 3. معالج النصوص القرآنية والتشكيل (الوقف والوصل والمدود)
 function normalizeArabic(str, preserveTashkeel = false) {
   if (!str) return "";
   let cleaned = str.trim();
@@ -76,7 +73,7 @@ function normalizeArabic(str, preserveTashkeel = false) {
     .replace(/[إأآٱاىوؤيئ]/g, m => ({'إ':'ا','أ':'ا','آ':'ا','ٱ':'ا','ى':'ا','و':'و','ؤ':'و','ي':'ي','ئ':'ي'}[m]))
     .replace(/ة/g, "ه")
     .replace(/ـ/g, "")
-    .replace(/([اوي])\1+/g, "$1") // معالجة المدود الصوتية بمرونة تامة
+    .replace(/([اوي])\1+/g, "$1")
     .trim();
 
   const sunLetters = /[تثدذرزسصضطظلن]/;
@@ -105,12 +102,14 @@ function enhancedSim(w1, w2) {
   );
 }
 
-// 4. خوارزمية التتبع التلقائي والمطابقة الفورية
 function trial(rw) {
   const [okT, nearT] = TH.strict;
-  const s = baseSt.slice(), h = hd.slice(); let p = basePos;
-  for (let k = basePos; k < h.length; k++) h[k] = "";
-  const end = Math.min(lim, words.length);
+  const s = baseSt.slice(), h = hd.slice(); 
+  let p = typeof basePos !== 'undefined' ? basePos : 0;
+
+  for (let k = p; k < h.length; k++) h[k] = "";
+  const end = Math.min(typeof lim !== 'undefined' ? lim : words.length, words.length);
+  
   const skipForced = () => { while (p < end && forced.has(p)) { s[p] = "ok"; h[p] = h[p] || "✓"; p++; } };
   skipForced();
 
@@ -144,7 +143,11 @@ function trial(rw) {
     }
     if (hit < 0) continue;
 
-    for (let k = p; k < hit; k++) s[k] = "miss";
+    for (let k = p; k < hit; k++) {
+      if (k >= (typeof basePos !== 'undefined' ? basePos : 0)) {
+        s[k] = "miss";
+      }
+    }
     
     const lab = score >= okT ? "ok" : "miss"; 
     
@@ -173,7 +176,7 @@ function trial(rw) {
 
   while (p < end && s[p] === "ok") p++;
   let sc = 0;
-  s.forEach((x, k) => { if (k >= basePos && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.2; });
+  s.forEach((x, k) => { if (k >= (typeof basePos !== 'undefined' ? basePos : 0) && k < p) sc += x === "ok" ? 1 : x === "near" ? .5 : -.2; });
   return { s, p, h, sc };
 }
 
@@ -187,13 +190,15 @@ function alignBest(cands) {
   render();
 }
 
-// 5. محرك الاستماع التلقائي والمستمر داخل المتصفح (مستقل ومحتوى داخل الكود)
+// ============================================================================
+// التشغيل التلقائي وطلب إذن الميكروفون فور فتح الموقع (بدون زر Start)
+// ============================================================================
 let internalRecognizer = null;
 
-function initLocalAIRecognition() {
+function requestMicAndStartAI() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    console.error("متصفحك لا يدعم محرك الاستماع المحلي.");
+    console.warn("المتصفح لا يدعم التعرف الصوتي المباشر.");
     return;
   }
 
@@ -206,40 +211,38 @@ function initLocalAIRecognition() {
     let candidates = [];
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       const transcript = event.results[i][0].transcript.trim();
-      if (transcript) {
-        candidates.push(transcript.split(/\s+/));
-      }
+      if (transcript) candidates.push(transcript.split(/\s+/));
     }
-    if (candidates.length > 0) {
-      alignBest(candidates);
-    }
+    if (candidates.length > 0) alignBest(candidates);
   };
 
   internalRecognizer.onerror = (err) => {
-    console.warn("إعادة تشغيل المحرك المحلي تلقائياً...", err);
+    console.warn("إعادة محاولة الاتصال بالميكروفون...", err);
   };
 
   internalRecognizer.onend = () => {
-    // إبقاء المحرك يعمل دائماً وبشكل مستمر أثناء التلاوة
     if (window.isListeningActive) {
-      internalRecognizer.start();
+      try {
+        internalRecognizer.start();
+      } catch (e) {}
     }
   };
 
   window.isListeningActive = true;
-  internalRecognizer.start();
+  
+  // طلب الميكروفون والبدء الفوري
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(() => {
+      internalRecognizer.start();
+    })
+    .catch((err) => {
+      console.error("تم رفض إذن الميكروفون من قبل المستخدم:", err);
+    });
 }
 
-function stopLocalAIRecognition() {
-  window.isListeningActive = false;
-  if (internalRecognizer) {
-    internalRecognizer.stop();
-  }
-}
-
-// تشغيل محرك الاستماع المحلي تلقائياً عند تحميل الكود
+// البدء التلقائي بمجرد تحميل الصفحة
 document.addEventListener("DOMContentLoaded", () => {
-  initLocalAIRecognition();
+  requestMicAndStartAI();
 });
 
 function htmlOf(i) {
