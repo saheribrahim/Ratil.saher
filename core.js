@@ -1,7 +1,5 @@
 // ============================================================================
-// Ratil.saher - Core JavaScript (Original Base Version)
-// ملاحظة: الملف يحتوي على الوظائف الأساسية للتحميل، والتلاوة، 
-// وإدارة الاستماع الصوتي والواجهة بدون تعديلات إضافية.
+// Ratil.saher - Core JavaScript (Strict & Precise Matching Version)
 // ============================================================================
 
 const $ = id => document.getElementById(id);
@@ -29,7 +27,7 @@ function htmlOf(i) {
   return words[i] ? words[i].t : "";
 }
 
-// ملاحظة: دالة المطابقة الأساسية للكلمات المنطوقة مع النص
+// المطابقة الصارمة والدقيقة للكلمات المنطوقة (بنسبة 0.85 لمنع قبول الكلمات الخاطئة أو المحرفة)
 function alignBest(cands) {
   if (!words.length || !cands || !cands.length) return;
   for (const tokens of cands) {
@@ -39,7 +37,7 @@ function alignBest(cands) {
     let tIdx = 0;
     
     while (p < words.length && tIdx < tokens.length) {
-      if (sim(words[p].n, tokens[tIdx]) >= 0.65) {
+      if (sim(words[p].n, tokens[tIdx]) >= 0.85) {
         st[p] = "ok";
         pos = p + 1;
         matched = true;
@@ -57,18 +55,17 @@ function alignBest(cands) {
   }
 }
 
-// ملاحظة: دالة تحميل الآيات والكلمات للسورة المختارة
+// تحميل الآيات
 function load() {
   const verses = ((LIB[$("riwaya").value] || {})[$("surah").value] || []);
   words = [];
-  lines = [];
   const box = $("text");
+  if (!box) return;
   box.innerHTML = "";
   
   verses.forEach((v, vi) => {
     const line = document.createElement("span");
     line.className = "v";
-    lines[vi] = line;
     v.split(/\s+/).filter(Boolean).forEach(t => {
       const n = norm(t);
       if (!n && words.length && words[words.length - 1].el.parentNode === line) {
@@ -91,14 +88,13 @@ function load() {
   });
   
   st = words.map(() => "todo");
-  hd = words.map(() => "");
   pos = 0;
   if (typeof paint === "function") paint();
   if (typeof memReset === "function") memReset();
   render();
 }
 
-// ملاحظة: دالة رسم وتحديث حالة الكلمات والواجهة
+// تحديث حالة الكلمات والواجهة
 function render() {
   let ok = 0, near = 0, miss = 0;
   
@@ -152,7 +148,7 @@ function msg(t, err) {
   }
 }
 
-// ملاحظة: دالة بدء التعرف الصوتي والاستماع
+// بدء التعرف الصوتي السلس والمطور
 function start() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
@@ -178,33 +174,26 @@ function spawn(SR) {
   rec.maxAlternatives = 3;
   
   rec.onresult = e => {
-    if (typeof busy !== "undefined" && busy) return;
-    const cands = [0, 1, 2].map(k => {
-      let t = "";
-      for (let i = 0; i < e.results.length; i++) {
-        const r = e.results[i];
-        t += " " + (r[k] || r[0]).transcript;
+    let interim = "";
+    let candidates = [];
+
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i];
+      for (let k = 0; k < res.length; k++) {
+        candidates.push(res[k].transcript);
       }
-      return t;
-    }).filter((t, i, a) => a.indexOf(t) === i);
+      if (!res.isFinal) {
+        interim += res[0].transcript;
+      }
+    }
     
-    if ($("live")) $("live").textContent = cands[0].trim();
-    alignBest(cands.map(t => t.split(/\s+/).map(norm).filter(Boolean)));
+    if ($("live")) $("live").textContent = interim.trim();
+    alignBest(candidates.map(t => t.split(/\s+/).map(norm).filter(Boolean)));
     if (typeof memCheck === "function") memCheck();
   };
   
   rec.onerror = e => {
-    const fatal = {
-      "not-allowed": "Microphone is blocked. Allow the mic for this page, or tap “Open in browser” at the top and try again there.",
-      "service-not-allowed": "Speech recognition is blocked here. Tap “Open in browser” at the top (use Chrome or Safari).",
-      "audio-capture": "No microphone was found.",
-      "network": "Speech recognition needs an internet connection.",
-      "language-not-supported": "Arabic recognition isn’t available on this device."
-    };
-    if (fatal[e.error]) {
-      msg(fatal[e.error], true);
-      stop();
-    } else if (e.error !== "no-speech" && e.error !== "aborted") {
+    if (e.error !== "no-speech" && e.error !== "aborted") {
       msg("Recognition error: " + e.error, true);
     }
   };
