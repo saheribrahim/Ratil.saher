@@ -55,12 +55,23 @@
 
 </div>
 
-<div id="memBar" class="bar" style="display:none">
-<label class="tg">من الآية <select id="mFrom"></select></label>
-<span class="tg">طريقة الحفظ: 🔊 استماع 3 مرات ← 📖 قراءة 3 مرات ← 🎙 تسميع 3 مرات</span>
-<button id="mStep">✓ أتممت القراءة</button>
-<button id="mHint">💡 تلميح</button>
-<span id="mSt" style="font-size:14px"></span>
+<div id="memBar" class="mem-panel" style="display:none">
+  <div class="mem-top">
+    <label class="tg">ابدأ من الآية <select id="mFrom"></select></label>
+    <strong id="mPhase">المرحلة الحالية: الاستماع</strong>
+  </div>
+  <div class="mem-stages">
+    <div id="mStageListen" class="mem-stage active"><b>🔊 الاستماع</b><span id="mListenCount">0/3</span></div>
+    <div id="mStageRead" class="mem-stage"><b>📖 القراءة بصوتك</b><span id="mReadCount">0/3</span></div>
+    <div id="mStageRecite" class="mem-stage"><b>🎙 التسميع من الذاكرة</b><span id="mReciteCount">0/3</span></div>
+  </div>
+  <p id="mHelp">استمع إلى الآية كاملة ثلاث مرات. اضغط زر الاستماع في كل مرة.</p>
+  <div class="mem-actions">
+    <button id="mStep" class="primary">🔊 استمع للآية (1/3)</button>
+    <button id="mHint">💡 إظهار كلمة</button>
+  </div>
+  <div id="mSt" aria-live="polite"></div>
+  <div id="mProgress" aria-live="polite"></div>
 </div>
 
 <div id="msg">Tap Start, allow the microphone, then recite. Works best in Chrome or Safari.</div>
