@@ -1,5 +1,5 @@
 // ============================================================================
-// Ratil.saher - Core JavaScript (Strict & Precise Matching Version)
+// Ratil.saher - Core JavaScript (Fixed Tajweed & Strict Sequential Matching)
 // ============================================================================
 
 const $ = id => document.getElementById(id);
@@ -27,7 +27,7 @@ function htmlOf(i) {
   return words[i] ? words[i].t : "";
 }
 
-// المطابقة الصارمة والدقيقة للكلمات المنطوقة (بنسبة 0.85 لمنع قبول الكلمات الخاطئة أو المحرفة)
+// المطابقة الصارمة التي تحسب الكلمات المتخطاة كخطأ (miss)
 function alignBest(cands) {
   if (!words.length || !cands || !cands.length) return;
   for (const tokens of cands) {
@@ -37,6 +37,14 @@ function alignBest(cands) {
     let tIdx = 0;
     
     while (p < words.length && tIdx < tokens.length) {
+      // إذا تخطى المستخدم كلمة ونطق الكلمة التي بعدها مباشرة، نعتبر الكلمة السابقة miss (خطأ)
+      if (p > pos && sim(words[p].n, tokens[tIdx]) >= 0.85) {
+        for (let k = pos; k < p; k++) {
+          st[k] = "miss";
+        }
+        pos = p;
+      }
+
       if (sim(words[p].n, tokens[tIdx]) >= 0.85) {
         st[p] = "ok";
         pos = p + 1;
@@ -94,7 +102,7 @@ function load() {
   render();
 }
 
-// تحديث حالة الكلمات والواجهة
+// تحديث حالة الكلمات والواجهة مع تفعيل التجويد بشكل دائم عند اختيار الزر
 function render() {
   let ok = 0, near = 0, miss = 0;
   
@@ -103,17 +111,7 @@ function render() {
     const memOn = typeof window.memOn !== "undefined" ? window.memOn : false;
 
     w.el.className = "w " + st[i] + (i === pos && listening ? " cur" : "") + (i === hintIdx ? " hint" : "");
-    
-    if (memOn && $("mMask") && $("mMask").value === "fl") {
-      const mk = st[i] === "todo" && i !== hintIdx;
-      if (w.m !== mk) {
-        w.m = mk;
-        w.el.innerHTML = mk && typeof fl === "function" ? fl(w.t) : htmlOf(i);
-      }
-    } else {
-      if (w.m) { w.m = false; }
-      w.el.innerHTML = htmlOf(i);
-    }
+    w.el.innerHTML = htmlOf(i);
 
     if (st[i] === "ok") ok++;
     else if (st[i] === "near") near++;
@@ -132,11 +130,17 @@ function render() {
   
   if (listening && words[pos]) words[pos].el.scrollIntoView({ block: "center", behavior: "smooth" });
   
+  // تفعيل أو إلغاء تفعيل خصائص التجويد والحفظ على حاوية النص الرئيسية
   const memOn = typeof window.memOn !== "undefined" ? window.memOn : false;
   if ($("text")) {
     $("text").classList.toggle("mem", memOn);
     if ($("mMask")) $("text").classList.toggle("fl", $("mMask").value === "fl");
-    if ($("tjw")) $("text").classList.toggle("tj", $("tjw").checked);
+    
+    // ربط زر أحكام التجويد بصرياً بشكل مباشر
+    const tjCheckbox = $("tjw");
+    if (tjCheckbox) {
+      $("text").classList.toggle("tj", tjCheckbox.checked);
+    }
   }
 }
 
@@ -148,7 +152,7 @@ function msg(t, err) {
   }
 }
 
-// بدء التعرف الصوتي السلس والمطور
+// بدء التعرف الصوتي
 function start() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
