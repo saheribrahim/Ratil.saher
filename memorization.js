@@ -5,7 +5,7 @@ function vList(){return[...new Set(words.map(w=>w.v))]}
 function vRange(v){let a=-1,b=-1;words.forEach((w,i)=>{if(w.v===v){if(a<0)a=i;b=i+1}});return[a,b]}
 function phaseName(){return memPhase==="listen"?"الاستماع":memPhase==="read"?"القراءة":"التسميع"}
 function memShow(){
- lines.forEach((l,k)=>{if(l)l.style.display=memOn&&k!==mv?"none":""});
+ const verseLines=$("text").children;Array.from(verseLines).forEach((l,k)=>{l.style.display=memOn&&k!==mv?"none":""});
  $("memBar").style.display=memOn?"flex":"none";
  if(memOn){const[a,b]=vRange(mv);vs=a;lim=b;$("mSt").textContent="الآية "+(vList().indexOf(mv)+1)+"/"+vList().length+" · "+phaseName()+" "+memCount+"/3";$("mStep").textContent=memPhase==="read"?"✓ أتممت القراءة":"🎙 ابدأ التسميع";$("mStep").style.display=memPhase==="read"||memPhase==="recite"?"":"none";$("mHint").style.display=memPhase==="recite"?"":"none"}else lim=1e9;
 }
