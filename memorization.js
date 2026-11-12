@@ -10,7 +10,7 @@ function memShow(){
  if(memOn){const[a,b]=vRange(mv);vs=a;lim=b;$("mSt").textContent="الآية "+(vList().indexOf(mv)+1)+"/"+vList().length+" · "+phaseName()+" "+memCount+"/3";$("mStep").textContent=memPhase==="read"?"✓ أتممت القراءة":"🎙 ابدأ التسميع";$("mStep").style.display=memPhase==="read"||memPhase==="recite"?"":"none";$("mHint").style.display=memPhase==="recite"?"":"none"}else lim=1e9;
 }
 function memReset(){const vl=vList();$("mFrom").innerHTML=vl.map(v=>`<option value="${v}">${v+1}</option>`).join("");if(memOn&&vl.length)memStart(vl[0]);else memShow()}
-function memToggle(){memOn=$("hide").checked;if(memOn){const vl=vList(),f=+$("mFrom").value;if(vl.length)memStart(vl.includes(f)?f:vl[0])}else{memAudioRun=false;stopAudio();memShow()}render()}
+function memToggle(){memOn=$("hide").checked;if(memOn){const vl=vList(),f=+$("mFrom").value;if(vl.length)memStart(vl.includes(f)?f:vl[0])}else{memAudioRun=false;stopAudio();if(listening)stop();memShow()}render()}
 function memStart(v){
  const[a,b]=vRange(v);if(a<0)return;if(listening)stop();stopAudio();mv=v;vs=a;lim=b;busy=false;memPhase="listen";memCount=0;memAudioRun=false;
  for(let i=a;i<b;i++){st[i]="todo";hd[i]=""}pos=a;$("live").textContent="";memShow();render();memListenThree();
