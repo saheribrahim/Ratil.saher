@@ -89,3 +89,10 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 #aMsg { font-size: 13px; color: var(--mute); min-height: 18px; }
 #aMsg.err { color: var(--miss); }
 ```[cite: 4]
+:root {
+  --tj-ql: #37bcfd; /* قلقلة (أزرق سماوي) */
+  --tj-gh: #e6b04a; /* غنة (برتقالي/ذهبي) */
+  --tj-md: #b06ef3; /* مد (بنفسجي) */
+  --tj-ikh: #e91e63; /* إخفاء (وردي) */
+  --tj-iql: #00bcd4; /* إقلاب (تركواز) */
+  --tj-idg: #2faa6e; /* إدغام (أخضر) */
