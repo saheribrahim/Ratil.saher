@@ -139,6 +139,9 @@ function render() {
   if ($("gt")) $("gt").textContent = !tot ? "ابدأ التلاوة لتظهر نتيجتك · Start reciting to see your score" : acc >= 85 ? "🟢 " + acc + "% ممتاز — استمر · Excellent" : acc >= 60 ? "🟡 " + acc + "% جيد — راجع الكلمات الحمراء · Good, review the red words" : "🔴 " + acc + "% حسّن نفسك — راجع وكرّر · Keep practicing";
   
   if (listening && words[pos]) words[pos].el.scrollIntoView({ block: "center", behavior: "smooth" });
+
+  // Reapply tajweed markup after render updates word states.
+  if ($("tjw") && $("tjw").checked && typeof paint === "function") paint();
   
   // تفعيل أو إلغاء تفعيل خصائص التجويد والحفظ على حاوية النص الرئيسية
   const memOn = typeof window.memOn !== "undefined" ? window.memOn : false;
