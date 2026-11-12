@@ -27,40 +27,50 @@ function htmlOf(i) {
   return words[i] ? words[i].t : "";
 }
 
-// المطابقة الصارمة التي تحسب الكلمات المتخطاة كخطأ (miss)
+// مطابقة تسلسلية محافظة: الأخضر للمطابقة النصية التامة فقط.
 function alignBest(cands) {
-  if (!words.length || !cands || !cands.length) return;
-  for (const tokens of cands) {
+  if (!words.length || !Array.isArray(cands) || !cands.length) return;
+  let changed = false;
+  for (const rawTokens of cands) {
+    const tokens = (rawTokens || []).filter(Boolean);
     if (!tokens.length) continue;
-    let matched = false;
-    let p = pos;
-    let tIdx = 0;
-    
-    while (p < words.length && tIdx < tokens.length) {
-      // إذا تخطى المستخدم كلمة ونطق الكلمة التي بعدها مباشرة، نعتبر الكلمة السابقة miss (خطأ)
-      if (p > pos && sim(words[p].n, tokens[tIdx]) >= 0.85) {
-        for (let k = pos; k < p; k++) {
-          st[k] = "miss";
-        }
-        pos = p;
+    let cursor = pos;
+    let localChanged = false;
+    for (const token of tokens) {
+      if (cursor >= words.length) break;
+      if (token === words[cursor].n) {
+        st[cursor] = "ok";
+        cursor++;
+        localChanged = true;
+        continue;
       }
-
-      if (sim(words[p].n, tokens[tIdx]) >= 0.85) {
-        st[p] = "ok";
-        pos = p + 1;
-        matched = true;
-        tIdx++;
-        p++;
-      } else {
-        break; 
+      // ابحث عن الكلمة المنطوقة في الكلمات القليلة التالية؛ لا نسجل المحذوف إلا
+      // عندما تظهر كلمة لاحقة مطابقة تماماً، لتقليل الإنذارات الكاذبة.
+      let found = -1;
+      for (let j = cursor + 1; j <= Math.min(cursor + 3, words.length - 1); j++) {
+        if (token === words[j].n) { found = j; break; }
+      }
+      if (found !== -1) {
+        for (let j = cursor; j < found; j++) st[j] = "miss";
+        st[found] = "ok";
+        cursor = found + 1;
+        localChanged = true;
+        continue;
+      }
+      // كلمة قريبة تُعرض كاحتمال للمراجعة، ولا تُحسب صحيحة.
+      if (sim(words[cursor].n, token) >= 0.72) {
+        st[cursor] = "near";
+        cursor++;
+        localChanged = true;
       }
     }
-    
-    if (matched) {
-      render();
+    if (localChanged) {
+      pos = cursor;
+      changed = true;
       break;
     }
   }
+  if (changed) render();
 }
 
 // تحميل الآيات
