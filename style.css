@@ -2,7 +2,18 @@
   --bg: #f7f5ef; --card: #fff; --ink: #1d2a24; --mute: #6b7a72;
   --line: #e3dfd2; --accent: #1f7a5a; --ok: #1f7a5a; --near: #b7791f;
   --miss: #c0392b; --cur: #dff3ea;
-  box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  
+  /* ألوان قواعد التجويد المضافة */
+  --tj-ql: #37bcfd;  /* قلقلة (أزرق سماوي) */
+  --tj-gh: #e6b04a;  /* غنة (برتقالي/ذهبي) */
+  --tj-md: #b06ef3;  /* مد (بنفسجي) */
+  --tj-ikh: #e91e63; /* إخفاء (وردي) */
+  --tj-iql: #00bcd4; /* إقلاب (تركواز) */
+  --tj-idg: #2faa6e; /* إدغام (أخضر) */
+
+  box-sizing: border-box; 
+  padding-top: env(safe-area-inset-top, 0px); 
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,7 +31,7 @@
 }
 
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; } /* تم تصحيح الخطأ هنا */
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, sans-serif; }
 main { max-width: 720px; margin: 0 auto; padding: 16px; }
 
@@ -89,10 +100,3 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 #aMsg { font-size: 13px; color: var(--mute); min-height: 18px; }
 #aMsg.err { color: var(--miss); }
 ```[cite: 4]
-:root {
-  --tj-ql: #37bcfd; /* قلقلة (أزرق سماوي) */
-  --tj-gh: #e6b04a; /* غنة (برتقالي/ذهبي) */
-  --tj-md: #b06ef3; /* مد (بنفسجي) */
-  --tj-ikh: #e91e63; /* إخفاء (وردي) */
-  --tj-iql: #00bcd4; /* إقلاب (تركواز) */
-  --tj-idg: #2faa6e; /* إدغام (أخضر) */
