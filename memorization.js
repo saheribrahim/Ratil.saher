@@ -32,6 +32,7 @@ function memCheck(){
  if(acc>=1){memCount++;memShow();msg("✅ تسميع صحيح! "+memCount+"/3");setTimeout(()=>{if(!memOn)return;if(memCount>=3){stop();const vl=vList(),k=vl.indexOf(mv);if(k+1<vl.length){memStart(vl[k+1]);msg("ما شاء الله! انتقلنا إلى الآية التالية.");}else{memStart(vl[0]);msg("🎉 أتممت السورة: 3 استماع + 3 قراءة + 3 تسميع.");}}else{busy=false;for(let i=vs;i<lim;i++)st[i]="todo";pos=vs;$("live").textContent="";render();memShow();msg("أعد التسميع مرة أخرى.");}},900)}
  else{msg("🔴 لم تكتمل المطابقة. راجع الآية وحاول مرة أخرى.");setTimeout(()=>{if(!memOn)return;busy=false;for(let i=vs;i<lim;i++)st[i]="todo";pos=vs;$("live").textContent="";render();},1800)}
 }
+$("hide").onchange=memToggle;
 $("mFrom").onchange=()=>{if(memOn)memStart(+$("mFrom").value)};
 $("mStep").onclick=memStep;
 $("mHint").onclick=()=>{if(!memOn||memPhase!=="recite"||pos>=lim)return;hintIdx=pos;render();setTimeout(()=>{hintIdx=-1;render()},2500)};
