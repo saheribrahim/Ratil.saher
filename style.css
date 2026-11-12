@@ -99,3 +99,18 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .tabs button { flex: 1; }
 #aMsg { font-size: 13px; color: var(--mute); min-height: 18px; }
 #aMsg.err { color: var(--miss); }
+
+/* Clear, visible memorization workflow */
+.mem-panel{display:none;flex-direction:column;gap:10px;margin:12px 0 16px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.mem-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+#mPhase{font-size:15px}
+.mem-stages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mem-stage{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;padding:10px 6px;border:1px solid var(--line);border-radius:12px;font-size:13px;background:var(--bg)}
+.mem-stage span{font-size:20px;font-weight:700}
+.mem-stage.active{border:2px solid var(--accent);background:var(--card)}
+.mem-stage.done{border-color:var(--ok);color:var(--ok)}
+#memBar #mHelp{margin:0;color:var(--mute);font-size:14px;line-height:1.7}
+.mem-actions{display:flex;gap:8px;flex-wrap:wrap}
+#memBar #mSt,#memBar #mProgress{font-size:13px;color:var(--mute);min-height:18px}
+#memBar #mStep{min-width:210px}
+@media(max-width:520px){.mem-stages{grid-template-columns:1fr}.mem-stage{flex-direction:row;justify-content:space-between}.mem-stage span{font-size:16px}}
