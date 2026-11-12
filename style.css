@@ -1,5 +1,5 @@
 /* ============================================================================
-   Ratil.saher - Style.css (Complete & Clean Dark Theme with Tajweed Support)
+   Ratil.saher - Style.css (Original Version)
    ============================================================================ */
 
 :root {
@@ -55,11 +55,11 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .v { display: block; margin-bottom: 6px; }
 .w { display: inline-block; padding: 0 5px; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; }
 
-/* تلوين حالات الكلمات أثناء التسميع بدقة */
-.w.ok { color: var(--ok) !important; }
-.w.near { color: var(--near) !important; }
-.w.miss { color: var(--miss) !important; text-decoration: underline wavy; text-underline-offset: 8px; }
-.w.cur { background: var(--cur) !important; }
+/* حالات الكلمات */
+.w.ok { color: var(--ok); }
+.w.near { color: var(--near); }
+.w.miss { color: var(--miss); text-decoration: underline wavy; }
+.w.cur { background: var(--cur); }
 
 .num { color: var(--mute); font-size: 22px; padding: 0 4px; }
 .stats { display: flex; gap: 10px; margin-top: 12px; }
@@ -72,7 +72,7 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 #msg.err { color: var(--miss); }
 #text i { font-style: normal; }
 
-/* وضع الحفظ (Memorization Mode) الأصلي */
+/* وضع الحفظ */
 .mem .w.todo { color: transparent !important; background: var(--line); }
 .mem .w.todo i { color: transparent !important; }
 .mem .w.todo.cur { background: var(--cur); }
@@ -85,19 +85,6 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 #sW { font-family: "Amiri Quran", "Traditional Arabic", serif; font-size: 44px; direction: rtl; line-height: 1.8; }
 #sI { font-size: 14px; color: var(--mute); margin: 4px 0 12px; }
 .sb { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-
-/* تفعيل أحكام التجويد وتلوين الكلمات بناءً على الفئات */
-.tj .w.ok { color: var(--ok) !important; }
-.tj .w.near { color: var(--near) !important; }
-.tj .w.miss { color: var(--miss) !important; text-decoration: underline wavy; text-underline-offset: 8px; }
-
-/* ألوان قواعد التجويد المتقدمة إذا وجدت كعناصر فرعية */
-.tj i[data-rule="ql"], .tj .ql { color: #37bcfd !important; } /* قلقلة */
-.tj i[data-rule="gh"], .tj .gh { color: #e6b04a !important; } /* غنة */
-.tj i[data-rule="md"], .tj .md { color: #b06ef3 !important; } /* مد */
-.tj i[data-rule="ikh"], .tj .ikh { color: #e91e63 !important; } /* إخفاء */
-.tj i[data-rule="iql"], .tj .iql { color: #00bcd4 !important; } /* إقلاب */
-.tj i[data-rule="idg-g"], .tj .idg-g { color: #2faa6e !important; } /* إدغام بغنة */
 
 #legend { flex-wrap: wrap; gap: 6px 14px; font-size: 13px; margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
 #legend small { flex-basis: 100%; color: var(--mute); }
