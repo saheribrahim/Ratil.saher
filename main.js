@@ -86,17 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 6. تفعيل وضع الحفظ الأساسي (Memorization Mode)
-  const memToggle = document.getElementById("hide");
-  if (memToggle) {
-    memToggle.addEventListener("change", (e) => {
-      if (e.target.checked) {
-        document.body.classList.add("mem");
-      } else {
-        document.body.classList.remove("mem");
-      }
-    });
-  }
+  // Memorization visibility is controlled by memorization.js on #text only.
 
   // 7. تفعيل أحكام التجويد (Tajweed Colors)
   const tjToggle = document.getElementById("tjw");
