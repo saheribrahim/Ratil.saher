@@ -1,70 +1,153 @@
-// Ratil memorization: listen 3x, read aloud with verification 3x, recite from memory 3x
-let memOn=false,mv=0,busy=false,lim=1e9,vs=0,hintIdx=-1,memPhase="listen",memCount=0,memAudioRun=false,memTranscript=[];
-function vList(){return[...new Set(words.map(w=>w.v))]}
+// Ratil memorization flow: 3 listens, 3 verified readings, 3 verified recitations
+let memOn=false,mv=0,lim=1e9,vs=0,hintIdx=-1;
+let memPhase="listen",memCounts={listen:0,read:0,recite:0};
+let memAttemptActive=false,memAttemptTokens=[],memWordIndex=0,memAudioBusy=false,memAudioToken=0;
+
+function vList(){return [...new Set(words.map(w=>w.v))]}
 function vRange(v){let a=-1,b=-1;words.forEach((w,i)=>{if(w.v===v){if(a<0)a=i;b=i+1}});return[a,b]}
-function phaseName(){return memPhase==="listen"?"الاستماع":memPhase==="read"?"القراءة بصوتك":"التسميع من الحفظ"}
+function memTarget(){return words.slice(vs,lim).map(w=>w.n).filter(Boolean)}
+function memPhaseLabel(){return memPhase==="listen"?"الاستماع":memPhase==="read"?"القراءة بصوتك":"التسميع من الذاكرة"}
 function memShow(){
- Array.from($("text").children).forEach((l,k)=>{l.style.display=memOn&&k!==mv?"none":""});
- $("memBar").style.display=memOn?"flex":"none";
- if(!memOn){lim=1e9;return}
- const[a,b]=vRange(mv);vs=a;lim=b;
- window.memPhase=memPhase;window.memOn=memOn;\n $("mSt").textContent="الآية "+(vList().indexOf(mv)+1)+"/"+vList().length+" · "+phaseName()+" · "+memCount+"/3";
- $("mStep").style.display=memPhase==="listen"?"none":"";
- $("mStep").textContent=memPhase==="read"?(listening?"⏹ إيقاف القراءة":"🎙 ابدأ القراءة "+(memCount+1)+"/3):(listening?"⏹ إيقاف التسميع":"🎙 ابدأ التسميع "+(memCount+1)+"/3");
+ const verseLines=$("text").children;
+ Array.from(verseLines).forEach((line,k)=>{line.style.display=memOn&&k!==mv?"none":""});
+ $("memBar").style.display=memOn?"block":"none";
+ window.memOn=memOn;window.memPhase=memPhase;window.memAttemptActive=memAttemptActive;
+ if(!memOn){lim=1e9;$("text").classList.remove("mem");return}
+ const range=vRange(mv);vs=range[0];lim=range[1];
+ $("mPhase").textContent="المرحلة الحالية: "+memPhaseLabel();
+ $("mListenCount").textContent=memCounts.listen+"/3";
+ $("mReadCount").textContent=memCounts.read+"/3";
+ $("mReciteCount").textContent=memCounts.recite+"/3";
+ ["listen","read","recite"].forEach((key)=>{
+  const el=$("mStage"+key.charAt(0).toUpperCase()+key.slice(1));
+  el.classList.toggle("active",key===memPhase);
+  el.classList.toggle("done",memCounts[key]===3);
+ });
+ $("mStep").disabled=memAudioBusy;
+ if(memPhase==="listen")$("mStep").textContent=memAudioBusy?"⏳ جارٍ تشغيل الآية…":"🔊 استمع للآية ("+(memCounts.listen+1)+"/3)";
+ else if(memAttemptActive)$("mStep").textContent="⏹ إنهاء المحاولة";
+ else $("mStep").textContent=(memPhase==="read"?"🎙 ابدأ القراءة ":"🎙 ابدأ التسميع ")+(memCounts[memPhase]+1)+"/3";
  $("mHint").style.display=memPhase==="recite"?"":"none";
- if($("text"))$("text").classList.toggle("mem",memOn&&memPhase==="recite");
+ $("text").classList.toggle("mem",memPhase==="recite");
 }
-function memReset(){const vl=vList();$("mFrom").innerHTML=vl.map(v=>`<option value="${v}">${v+1}</option>`).join("");if(memOn&&vl.length)memStart(vl[0]);else memShow()}
+function memReset(){
+ const vl=vList();
+ $("mFrom").innerHTML=vl.map(v=>`<option value="${v}">${v+1}</option>`).join("");
+ if(memOn&&vl.length)memStart(vl[0]);else memShow();
+}
 function memToggle(){
  memOn=$("hide").checked;window.memOn=memOn;
- if(memOn){const vl=vList(),f=+$("mFrom").value;if(vl.length)memStart(vl.includes(f)?f:vl[0]);}
- else{memAudioRun=false;stopAudio();if(listening)stop();$("text").classList.remove("mem");memShow()}
- render();
+ if(memOn){
+  const vl=vList(),chosen=+$("mFrom").value;
+  if(!vl.length){msg("حمّل نص السورة أولًا من زر تحميل السور أو استيراد النص.",1);$("hide").checked=false;memOn=false;window.memOn=false;memShow();return}
+  memStart(vl.includes(chosen)?chosen:vl[0]);
+ }else{
+  memCancelAudio();memCancelAttempt();$("text").classList.remove("mem");memShow();render();
+ }
 }
 function memStart(v){
- const[a,b]=vRange(v);if(a<0)return;
- if(listening)stop();stopAudio();mv=v;vs=a;lim=b;busy=false;memPhase="listen";memCount=0;memAudioRun=false;
- for(let i=a;i<b;i++){st[i]="todo";hd[i]=""}pos=a;memTranscript=[];$("live").textContent="";
- memShow();render();memListenThree();
+ const [a,b]=vRange(v);if(a<0)return;
+ memCancelAudio();memCancelAttempt();
+ mv=v;vs=a;lim=b;memPhase="listen";memCounts={listen:0,read:0,recite:0};
+ for(let i=a;i<b;i++){st[i]="todo";hd[i]=""}
+ pos=a;hintIdx=-1;$("live").textContent="";
+ memShow();render();
+ msg("ابدأ بالضغط على زر الاستماع. سيُشغّل الآية كاملة ثلاث مرات.");
 }
-function memListenThree(){
- if(!memOn||memPhase!=="listen"||memAudioRun)return;memAudioRun=true;
+function memCancelAudio(){
+ memAudioToken++;memAudioBusy=false;
+ if(typeof stopAudio==="function")stopAudio();
+}
+function memPlayQueue(urls,token){
+ let index=0,finished=false;
+ const finish=ok=>{
+  if(finished||token!==memAudioToken)return;
+  finished=true;memAudioBusy=false;
+  if(!ok){memShow();msg("لم يعمل الصوت. تأكد من الإنترنت أو اختر رواية يتوفر لها صوت.",1);return}
+  memCounts.listen++;memShow();
+  if(memCounts.listen>=3){memPhase="read";memShow();msg("✅ انتهى الاستماع 3 مرات. اقرأ الآية بصوتك من زر الميكروفون.");}
+  else msg("✅ اكتمل الاستماع "+memCounts.listen+"/3. اضغط زر الاستماع مرة أخرى.");
+ };
+ const next=()=>{
+  if(token!==memAudioToken||!memOn)return;
+  if(index>=urls.length){finish(true);return}
+  try{
+   aud=new Audio(urls[index++]);
+   aud.onended=next;aud.onerror=()=>finish(false);
+   const p=aud.play();if(p&&p.catch)p.catch(()=>finish(false));
+  }catch(_){finish(false)}
+ };
+ next();
+}
+function memBeginListen(){
  const urls=verseUrls(+$("surah").value,mv+1,$("riwaya").value,"");
- if(!urls){memAudioRun=false;msg("لا يتوفر صوت لهذه الرواية. اختر قارئًا متاحًا أو راجع اتصال الإنترنت.",1);return}
- let n=0;
- const one=()=>{if(!memOn||memPhase!=="listen")return;if(n>=3){memAudioRun=false;memPhase="read";memCount=0;memShow();msg("✅ انتهى الاستماع 3 مرات. ابدأ القراءة بصوتك 3 مرات.");return}
- n++;$("mSt").textContent="الاستماع "+n+"/3";
- playQueue(urls,()=>{memAudioRun=false;msg("تعذّر تشغيل صوت الآية. تحقق من الإنترنت.",1)},()=>setTimeout(one,450));};
- one();
+ if(!urls||!urls.length){msg("لا يتوفر صوت لهذه الآية في الرواية المختارة. جرّب حفص عن عاصم أو قارئًا آخر.",1);return}
+ memAudioToken++;const token=memAudioToken;memAudioBusy=true;memShow();
+ msg("🔊 استمع إلى الآية كاملة حتى ينتهي الصوت.");
+ memPlayQueue(urls,token);
+}
+function memBeginAttempt(){
+ memAttemptTokens=[];memWordIndex=0;memAttemptActive=true;window.memAttemptActive=true;
+ for(let i=vs;i<lim;i++)st[i]="todo";
+ pos=vs;$("live").textContent="";render();memShow();
+ start();
+ if(!listening){memAttemptActive=false;window.memAttemptActive=false;memShow();msg("لم يبدأ الميكروفون. استخدم Chrome واسمح للموقع بالوصول إلى الميكروفون.",1);return}
+ msg(memPhase==="read"?"🎙 اقرأ الآية كاملة بصوتك. سيقارن رتّل الكلمات التي يسمعها.":"🎙 سمّع الآية كاملة من حفظك. النص مخفي أثناء التسميع.");
 }
 function memStep(){
  if(!memOn)return;
- if(listening){stop();memTranscript=[];memShow();msg("توقفت المحاولة. اضغط الزر لإعادة المحاولة.");return}
- if(memPhase==="read"||memPhase==="recite"){
-  for(let i=vs;i<lim;i++)st[i]="todo";pos=vs;busy=false;$("live").textContent="";
-  memTranscript=[];render();memShow();start();
-  msg(memPhase==="read"?"🎙 اقرأ الآية كاملة بصوت واضح. سيُحتسب التكرار بعد مطابقة الآية.":"🎙 سمّع الآية كاملة من حفظك. سيُحتسب التكرار بعد مطابقتها.");
+ if(memPhase==="listen"){if(!memAudioBusy)memBeginListen();return}
+ if(memAttemptActive){
+  memCancelAttempt();
+  msg("انتهت المحاولة قبل اكتمال الآية؛ لن تُحتسب. اضغط الزر لإعادتها.");
+  return;
  }
+ memBeginAttempt();
+}
+function memCancelAttempt(){
+ if(memAttemptActive){memAttemptActive=false;window.memAttemptActive=false;if(typeof listening!=="undefined"&&listening)stop()}
+ memAttemptTokens=[];memWordIndex=0;
 }
 function memHandleTranscript(transcript){
- if(!memOn||!["read","recite"].includes(memPhase)||busy)return;
- const got=String(transcript||"").split(/\\s+/).map(norm).filter(Boolean);
- if(!got.length)return;
- memTranscript.push(...got);
- const target=words.slice(vs,lim).map(w=>w.n).filter(Boolean);
- let j=0;for(const token of memTranscript){if(token===target[j])j++;if(j===target.length)break}
+ if(!memOn||!memAttemptActive||!["read","recite"].includes(memPhase))return;
+ const tokens=String(transcript||"").split(/\s+/).map(norm).filter(Boolean);
+ if(!tokens.length)return;
+ memAttemptTokens.push(...tokens);
+ const target=memTarget();
+ for(const token of tokens){
+  if(memWordIndex<target.length&&token===target[memWordIndex])memWordIndex++;
+ }
  $("live").textContent=String(transcript||"");
- if(j!==target.length){$("mSt").textContent=phaseName()+" "+memCount+"/3 · تم التعرف على "+j+"/"+target.length+" كلمة";return}
- busy=true;stop();memCount++;memTranscript=[];memShow();msg("✅ تم التعرف على الآية كاملة! "+phaseName()+" "+memCount+"/3");
+ $("mProgress").textContent="تم التعرف على "+memWordIndex+" من "+target.length+" كلمة";
+ if(memWordIndex>=target.length)memAttemptSuccess();
+}
+function memAttemptSuccess(){
+ if(!memAttemptActive)return;
+ memAttemptActive=false;window.memAttemptActive=false;
+ if(typeof listening!=="undefined"&&listening)stop();
+ memCounts[memPhase]++;memShow();
+ msg("✅ تم التعرف على الآية كاملة. "+memPhaseLabel()+" "+memCounts[memPhase]+"/3");
  setTimeout(()=>{
   if(!memOn)return;
-  if(memCount>=3){
-   if(memPhase==="read"){memPhase="recite";memCount=0;for(let i=vs;i<lim;i++)st[i]="todo";pos=vs;render();memShow();msg("📖 أتممت القراءة 3 مرات. الآن سمّع من ذاكرتك 3 مرات.");}
-   else{const vl=vList(),k=vl.indexOf(mv);if(k+1<vl.length){memStart(vl[k+1]);msg("ما شاء الله! انتقلنا إلى الآية التالية.");}else{memStart(vl[0]);msg("🎉 أتممت السورة: استماع 3 + قراءة 3 + تسميع 3.");}}
-  }else{busy=false;for(let i=vs;i<lim;i++)st[i]="todo";pos=vs;memTranscript=[];$("live").textContent="";render();memShow();msg("تم احتساب التكرار الصحيح. ابدأ المحاولة التالية "+(memCount+1)+"/3.");}
+  if(memCounts[memPhase]>=3){
+   if(memPhase==="read"){
+    memPhase="recite";memShow();render();
+    msg("📖 انتهت 3 قراءات. الآن أخفينا نص الآية: ابدأ التسميع من الذاكرة.");
+   }else if(memPhase==="recite"){
+    const vl=vList(),k=vl.indexOf(mv);
+    if(k+1<vl.length){memStart(vl[k+1]);msg("ما شاء الله! انتقلنا إلى الآية التالية.");}
+    else{memStart(vl[0]);msg("🎉 أتممت السورة: 3 استماع + 3 قراءة + 3 تسميع.");}
+   }
+  }else{
+   memShow();msg("✅ تكرار صحيح. ابدأ المحاولة التالية "+(memCounts[memPhase]+1)+"/3.");
+  }
  },700);
 }
 $("hide").onchange=memToggle;
 $("mFrom").onchange=()=>{if(memOn)memStart(+$("mFrom").value)};
 $("mStep").onclick=memStep;
-$("mHint").onclick=()=>{if(!memOn||memPhase!=="recite"||pos>=lim)return;hintIdx=pos;render();setTimeout(()=>{hintIdx=-1;render()},2500)};
+$("mHint").onclick=()=>{
+ if(!memOn||memPhase!=="recite"||!words[pos])return;
+ hintIdx=pos;render();setTimeout(()=>{hintIdx=-1;render()},2500);
+};
+window.memHandleTranscript=memHandleTranscript;
