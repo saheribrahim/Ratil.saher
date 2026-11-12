@@ -21,7 +21,16 @@ label.tg{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--mute
 .w.near{color:var(--near)}
 .w.miss{color:var(--miss);text-decoration:underline wavy;text-underline-offset:8px}
 .w.cur{background:var(--cur)}
+/* ألوان حالات الكلمات أثناء التسميع */
+.w.ok { color: #4fd1a1 !important; }      /* لون الكلمة المطابقة (أخضر) */
+.w.near { color: #e6b04a !important; }    /* لون الكلمة القريبة (أصفر/برتقالي) */
+.w.miss { color: #ff7a6b !important; text-decoration: underline wavy; } /* لون الكلمة الخاطئة أو المفقودة (أحمر) */
+.w.cur { background: #1f3a2e !important; }  /* تظليل الكلمة الحالية التي يتم قراءتها */
 
+/* تفعيل أحكام التجويد عندما يكون الزر مفعلًا */
+.tj .w.ok, .tj .w.ok i { color: #4fd1a1 !important; }
+.tj .w.near, .tj .w.near i { color: #e6b04a !important; }
+.tj .w.miss, .tj .w.miss i { color: #ff7a6b !important; }
 .num{color:var(--mute);font-size:22px;padding:0 4px}
 .stats{display:flex;gap:10px;margin-top:12px}
 .stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
