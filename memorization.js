@@ -58,33 +58,62 @@ function memCancelAudio(){
  memAudioToken++;memAudioBusy=false;
  if(typeof stopAudio==="function")stopAudio();
 }
-function memPlayQueue(urls,token){
- let index=0,finished=false;
- const finish=ok=>{
-  if(finished||token!==memAudioToken)return;
-  finished=true;memAudioBusy=false;
-  if(!ok){memShow();msg("لم يعمل الصوت. تأكد من الإنترنت أو اختر رواية يتوفر لها صوت.",1);return}
-  memCounts.listen++;memShow();
-  if(memCounts.listen>=3){memPhase="read";memShow();msg("✅ انتهى الاستماع 3 مرات. اقرأ الآية بصوتك من زر الميكروفون.");}
-  else msg("✅ اكتمل الاستماع "+memCounts.listen+"/3. اضغط زر الاستماع مرة أخرى.");
- };
+function memPlayOneSet(urls,token,done){
+ let index=0,failed=false,finished=false;
+ const finish=ok=>{if(finished)return;finished=true;done(ok)};
  const next=()=>{
   if(token!==memAudioToken||!memOn)return;
   if(index>=urls.length){finish(true);return}
   try{
-   aud=new Audio(urls[index++]);
-   aud.onended=next;aud.onerror=()=>finish(false);
-   const p=aud.play();if(p&&p.catch)p.catch(()=>finish(false));
-  }catch(_){finish(false)}
+   const player=new Audio();aud=player;player.preload="auto";player.volume=1;
+   player.onended=next;
+   player.onerror=()=>{if(!failed){failed=true;finish(false)}};
+   player.src=urls[index++];
+   const p=player.play();
+   if(p&&p.catch)p.catch(()=>{if(!failed){failed=true;finish(false)}});
+  }catch(_){if(!failed){failed=true;finish(false)}}
  };
  next();
 }
+function memPlaySources(sets,token,index=0){
+ if(token!==memAudioToken||!memOn)return;
+ if(index>=sets.length){memAudioBusy=false;memShow();msg("تعذّر تشغيل صوت الآية من مصادر الصوت. جرّب تحديث الصفحة أو اختيار رواية حفص عن عاصم.",1);return}
+ memPlayOneSet(sets[index],token,ok=>{
+  if(token!==memAudioToken)return;
+  if(ok){
+   memAudioBusy=false;memCounts.listen++;memShow();
+   if(memCounts.listen>=3){memPhase="read";memShow();msg("✅ انتهى الاستماع 3 مرات. ابدأ القراءة بصوتك.");}
+   else msg("✅ اكتمل الاستماع "+memCounts.listen+"/3. اضغط زر الاستماع للتكرار التالي.");
+  }else{
+   msg("تعذّر المصدر الصوتي الأول، أحاول مصدرًا بديلًا…");
+   memPlaySources(sets,token,index+1);
+  }
+ });
+}
+function globalAyahNumber(s,a){
+ const counts=[7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
+ if(s<1||s>114||a<1||a>counts[s-1])return 0;
+ return counts.slice(0,s-1).reduce((sum,n)=>sum+n,0)+a;
+}
 function memBeginListen(){
- const urls=verseUrls(+$("surah").value,mv+1,$("riwaya").value,"");
- if(!urls||!urls.length){msg("لا يتوفر صوت لهذه الآية في الرواية المختارة. جرّب حفص عن عاصم أو قارئًا آخر.",1);return}
- memAudioToken++;const token=memAudioToken;memAudioBusy=true;memShow();
- msg("🔊 استمع إلى الآية كاملة حتى ينتهي الصوت.");
- memPlayQueue(urls,token);
+ const s=+$("surah").value,a=mv+1,riw=$("riwaya").value;
+ const sets=[];
+ const primary=verseUrls(s,a,riw,"");
+ if(primary&&primary.length)sets.push(primary);
+ if(riw==="حفص عن عاصم"){
+  const globalNo=globalAyahNumber(s,a);
+  if(globalNo)sets.push(["https://cdn.islamic.network/quran/audio/128/ar.alafasy/"+globalNo+".mp3"]);
+ }
+ if(!sets.length){
+  msg("لا يوجد ملف صوت متاح لهذه الرواية في هذه الآية. لرواية ورش، اضغط أولًا «تحميل كل سور الرواية» حتى تُحمّل خريطة أرقام الصوت.",1);
+  return;
+ }
+ memCancelAudio();
+ const token=memAudioToken;
+ memAudioBusy=true;memShow();
+ $("mProgress").textContent="تشغيل صوت الآية…";
+ msg("🔊 استمع إلى الآية كاملة. لن يُحسب التكرار إلا بعد انتهاء الصوت.");
+ memPlaySources(sets,token);
 }
 function memBeginAttempt(){
  memAttemptTokens=[];memWordIndex=0;memAttemptActive=true;window.memAttemptActive=true;
