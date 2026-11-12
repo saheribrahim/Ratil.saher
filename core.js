@@ -205,8 +205,13 @@ function spawn(SR) {
     }
     
     if ($("live")) $("live").textContent = interim.trim();
-    alignBest(candidates.map(t => t.split(/\s+/).map(norm).filter(Boolean)));
-    if (typeof memCheck === "function") memCheck();
+    if (window.memOn && typeof window.memHandleTranscript === "function") {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) window.memHandleTranscript(e.results[i][0].transcript);
+      }
+    } else {
+      alignBest(candidates.map(t => t.split(/\s+/).map(norm).filter(Boolean)));
+    }
   };
   
   rec.onerror = e => {
