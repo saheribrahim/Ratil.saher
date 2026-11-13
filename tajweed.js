@@ -98,11 +98,11 @@ function tjRuleSet(index){
   // Basic ra cases only; exceptions and complex waqf cases need a qualified review.
   current.forEach((c,i)=>{
     if(c.base!=="ر")return;
-    if(c.marks.includes("\u064E")||c.marks.includes("\uُ"))tjAdd(result,"q","تفخيم الراء (بحركتها)","الراء مفتوحة أو مضمومة في النص.");
+    if(c.marks.includes("\u064E")||c.marks.includes("\u064F"))tjAdd(result,"q","تفخيم الراء (بحركتها)","الراء مفتوحة أو مضمومة في النص.");
     else if(c.marks.includes("\u0650"))tjAdd(result,"id","ترقيق الراء (بحركتها)","الراء مكسورة في النص.");
     else if(c.marks.includes("\u0652")){
       const before=current[i-1]||prev[prev.length-1]||null;
-      if(before&&(before.marks.includes("\u064E")||before.marks.includes("\uُ")))tjAdd(result,"q","تفخيم الراء (بحسب ما قبلها)","الراء ساكنة وقبلها فتح أو ضم ظاهر.");
+      if(before&&(before.marks.includes("\u064E")||before.marks.includes("\u064F")))tjAdd(result,"q","تفخيم الراء (بحسب ما قبلها)","الراء ساكنة وقبلها فتح أو ضم ظاهر.");
       else if(before&&(before.marks.includes("\u0650")||before.base==="ي"))tjAdd(result,"id","ترقيق الراء (بحسب ما قبلها)","الراء ساكنة وقبلها كسر أو ياء.");
     }
   });
