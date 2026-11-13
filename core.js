@@ -167,15 +167,25 @@ function msg(t, err) {
 
 // بدء التعرف الصوتي
 function start() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    msg("Speech recognition isn’t supported in this browser. Try Chrome or Safari.", true);
-    return;
-  }
   listening = true;
   if ($("mic")) {
     $("mic").textContent = "⏹ Stop";
     $("mic").classList.add("rec");
+  }
+  if (window.RatilQuranAI) {
+    msg("جارٍ تشغيل نموذج التعرّف القرآني على جهازك...");
+    window.RatilQuranAI.start().catch(error => {
+      console.error(error);
+      if (listening) stop();
+      msg(error && error.message ? error.message : "تعذّر تشغيل نموذج التعرّف القرآني.", true);
+    });
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    listening = false;
+    msg("التعرّف الصوتي غير مدعوم في هذا المتصفح.", true);
+    return;
   }
   msg("Listening… start reciting.");
   spawn(SR);
@@ -241,6 +251,7 @@ function spawn(SR) {
 
 function stop() {
   listening = false;
+  if (window.RatilQuranAI) window.RatilQuranAI.stop();
   if (rec) {
     rec.onend = null;
     try { rec.stop(); } catch (_) {}
