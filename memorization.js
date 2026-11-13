@@ -5,7 +5,14 @@ let memAttemptActive=false,memAttemptTokens=[],memWordIndex=0,memAudioBusy=false
 
 function vList(){return [...new Set(words.map(w=>w.v))]}
 function vRange(v){let a=-1,b=-1;words.forEach((w,i)=>{if(w.v===v){if(a<0)a=i;b=i+1}});return[a,b]}
-function memTarget(){return words.slice(vs,lim).map(w=>w.n).filter(Boolean)}
+// Strict Quran-word comparison: remove marks, but preserve real letter distinctions.
+function memNorm(s){
+ return String(s||"")
+  .replace(/[\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]/g,"")
+  .replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي")
+  .replace(/[^\\u0621-\\u064A]/g,"");
+}
+function memTarget(){return words.slice(vs,lim).map(w=>memNorm(w.t)).filter(Boolean)}
 function memPhaseLabel(){return memPhase==="listen"?"الاستماع":memPhase==="read"?"القراءة بصوتك":"التسميع من الذاكرة"}
 function memShow(){
  const verseLines=$("text").children;
@@ -135,7 +142,7 @@ function memCancelAttempt(){
  memAttemptTokens=[];memWordIndex=0;
 }
 function memTargetEntries(){
- return words.slice(vs,lim).map((w,i)=>({index:vs+i,n:w.n,text:w.t})).filter(x=>x.n);
+ return words.slice(vs,lim).map((w,i)=>({index:vs+i,n:memNorm(w.t),text:w.t})).filter(x=>x.n);
 }
 function memUpdateFeedback(){
  const errors=memAttemptErrors;
@@ -148,7 +155,7 @@ function memHandleCandidates(candidates){
  let best="",bestScore=-Infinity;
  for(const candidate of candidates){
   const text=String(candidate||"").trim();
-  const tokens=text.split(/\s+/).map(norm).filter(Boolean);
+  const tokens=text.split(/\s+/).map(memNorm).filter(Boolean);
   if(!tokens.length)continue;
   let cursor=memWordIndex,exact=0,skips=0,similar=0;
   for(const token of tokens){
