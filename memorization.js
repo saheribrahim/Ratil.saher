@@ -142,9 +142,37 @@ function memUpdateFeedback(){
  if(!errors.length){$("mFeedback").textContent="";return}
  $("mFeedback").textContent=errors.map(e=>"الكلمة الصحيحة: "+e.expected+" — المسموع: "+e.heard).join("  |  ");
 }
+function memHandleCandidates(candidates){
+ if(!memOn||!memAttemptActive||!Array.isArray(candidates))return;
+ const target=memTargetEntries();
+ let best="",bestScore=-Infinity;
+ for(const candidate of candidates){
+  const text=String(candidate||"").trim();
+  const tokens=text.split(/\s+/).map(norm).filter(Boolean);
+  if(!tokens.length)continue;
+  let cursor=memWordIndex,exact=0,skips=0,similar=0;
+  for(const token of tokens){
+   if(cursor>=target.length)break;
+   if(token===target[cursor].n){exact++;cursor++;continue}
+   let found=-1;
+   for(let j=cursor+1;j<Math.min(cursor+4,target.length);j++){
+    if(token===target[j].n){found=j;break}
+   }
+   if(found>=0){skips+=found-cursor;exact++;cursor=found+1;continue}
+   let score=0;
+   for(let j=cursor;j<Math.min(cursor+2,target.length);j++){
+    score=Math.max(score,sim(target[j].n,token));
+   }
+   similar+=score;
+  }
+  const score=exact*10+similar-skips*3-Math.abs(tokens.length-(cursor-memWordIndex))*.15;
+  if(score>bestScore){bestScore=score;best=text}
+ }
+ if(best)memHandleTranscript(best);
+}
 function memHandleTranscript(transcript){
  if(!memOn||!memAttemptActive||!["read","recite"].includes(memPhase))return;
- const tokens=String(transcript||"").split(/\\s+/).map(norm).filter(Boolean);
+ const tokens=String(transcript||"").split(/\s+/).map(norm).filter(Boolean);
  if(!tokens.length)return;
  memAttemptTokens.push(...tokens);
  const target=memTargetEntries();
