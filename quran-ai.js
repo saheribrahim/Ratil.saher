@@ -1,9 +1,7 @@
 // Ratil Quran AI — on-device Quran-specific speech recognition.
 // Audio is processed in this browser. Only model/library files are downloaded on first use.
 (() => {
-  const MODEL_ID = "Mustanad/whisper-base-ar-quran-onnx";
-  const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/+esm";
-  const MODEL_DOWNLOAD_NOTE = "التنزيل الأول للنموذج يقارب 106 ميجابايت. بعد التخزين المؤقت يعالج رتّل الصوت على جهازك دون رفع التلاوة إلى خادم.";
+  const MODEL_ID = "whisper-base-ar-quran-onnx";
   let transcriber = null;
   let loadingPromise = null;
   let mediaStream = null;
@@ -32,27 +30,24 @@
   async function loadModel() {
     if (transcriber) return transcriber;
     if (!loadingPromise) {
-      status("جارٍ تحميل نموذج التعرّف القرآني لأول مرة. " + MODEL_DOWNLOAD_NOTE);
-      loadingPromise = import(TRANSFORMERS_URL).then(({ pipeline, env }) => {
-        env.allowLocalModels = false;
+      status("جارٍ تجهيز محرك التعرّف القرآني...");
+      loadingPromise = import("./vendor/transformers/transformers.min.js").then(({ pipeline, env }) => {
+        env.allowLocalModels = true;
+        env.allowRemoteModels = false;
+        env.localModelPath = new URL("./models/", import.meta.url).href;
         env.useBrowserCache = true;
+        env.backends.onnx.wasm.wasmPaths = new URL("./vendor/transformers/", import.meta.url).href;
         return pipeline(
           "automatic-speech-recognition",
           MODEL_ID,
           {
             device: "wasm",
             dtype: "q8",
-            progress_callback: info => {
-              if (info && info.status === "progress" && Number.isFinite(info.progress)) {
-                const pct = Math.max(0, Math.min(100, Math.round(info.progress)));
-                status("تحميل نموذج التلاوة القرآنية: " + pct + "% — " + MODEL_DOWNLOAD_NOTE);
-              }
-            }
           }
         );
       }).then(pipe => {
         transcriber = pipe;
-        status("تم تجهيز نموذج التلاوة القرآنية على جهازك. ابدأ القراءة.");
+        status("محرك التعرّف القرآني جاهز. ابدأ القراءة.");
         return pipe;
       }).catch(error => {
         loadingPromise = null;
@@ -120,7 +115,7 @@
         }
       } catch (error) {
         console.error("Ratil Quran ASR error:", error);
-        status("تعذّر تحليل هذا المقطع. أعد المحاولة في مكان هادئ وتأكد من اكتمال تنزيل النموذج.", true);
+        status("تعذّر تحليل المقطع. تأكد من وجود ملفات المحرك داخل الموقع ثم أعد المحاولة.", true);
       }
     });
   }
@@ -183,7 +178,7 @@
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("يحتاج الميكروفون إلى متصفح حديث واتصال HTTPS.");
       }
-      status("اطلب إذن الميكروفون، ثم يجري تجهيز نموذج التلاوة القرآني. " + MODEL_DOWNLOAD_NOTE);
+      status("اطلب إذن الميكروفون لبدء التسميع.");
       mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
       });
