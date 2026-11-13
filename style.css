@@ -120,3 +120,17 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .mem .w { background: var(--line) !important; }
 .mem .w.cur { background: var(--cur) !important; }
 .mem-feedback { margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.8; white-space: normal; }
+
+
+/* Text-derived Tajweed report: expected rules, never an acoustic pass/fail. */
+.tj-report{margin:0 0 12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.tj-report>strong{display:block;font-size:15px;margin-bottom:5px}
+#tajweedNote{margin:0 0 10px;color:var(--mute);font-size:13px;line-height:1.8}
+#tajweedRows{display:flex;flex-direction:column;gap:8px}
+.tj-report-row{display:grid;grid-template-columns:minmax(100px,auto) 1fr;gap:8px;align-items:center;padding:8px;border-radius:10px;background:var(--bg)}
+.tj-report-word{font-family:"Amiri Quran","Traditional Arabic",serif;font-size:22px;white-space:nowrap}
+.tj-report-chips{display:flex;flex-wrap:wrap;gap:5px}
+.tj-chip{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;border:1px solid var(--tj-chip-color);color:var(--tj-chip-color);font-size:12px;line-height:1.5}
+.tj-empty{margin:0;color:var(--mute);font-size:13px}
+.mem-truth-note{margin:0;padding:8px 10px;border-right:3px solid var(--accent);border-radius:8px;background:var(--bg);color:var(--mute);font-size:12px;line-height:1.8}
+@media(max-width:520px){.tj-report-row{grid-template-columns:1fr;gap:5px}.tj-report-word{font-size:24px}}
