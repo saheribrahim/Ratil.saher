@@ -96,7 +96,7 @@
     if (window.memOn && window.memAttemptActive && typeof window.memHandleCandidates === "function") {
       window.memHandleCandidates([transcript]);
     } else if (!window.memOn && typeof window.alignBest === "function") {
-      window.alignBest([transcript.split(/\\s+/).map(token => token.replace(/[^\\u0621-\\u064A\\u0671]/g, "")).filter(Boolean)]);
+      window.alignBest([transcript.split(/\s+/).map(token => token.replace(/[^\u0621-\u064A\u0671]/g, "")).filter(Boolean)]);
     }
   }
 
