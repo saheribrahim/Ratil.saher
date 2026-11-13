@@ -216,6 +216,7 @@
 
   function stop() {
     const session = activeSession;
+    if (isStarting) activeSession++;
     isCapturing = false;
     if (speechStarted && segmentParts.length) flushSegment(session);
     if (processorNode) {
