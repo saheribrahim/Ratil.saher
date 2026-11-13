@@ -179,7 +179,7 @@ function memHandleCandidates(candidates){
 }
 function memHandleTranscript(transcript){
  if(!memOn||!memAttemptActive||!["read","recite"].includes(memPhase))return;
- const tokens=String(transcript||"").split(/\s+/).map(norm).filter(Boolean);
+ const tokens=String(transcript||"").split(/\s+/).map(memNorm).filter(Boolean);
  if(!tokens.length)return;
  memAttemptTokens.push(...tokens);
  const target=memTargetEntries();
