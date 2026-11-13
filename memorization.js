@@ -9,7 +9,7 @@ function vRange(v){let a=-1,b=-1;words.forEach((w,i)=>{if(w.v===v){if(a<0)a=i;b=
 function memNorm(s){
  return String(s||"")
   .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g,"")
-  .replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي")
+  .replace(/[أإآٱ]/g,"ا")
   .replace(/[^\u0621-\u064A]/g,"");
 }
 function memTarget(){return words.slice(vs,lim).map(w=>memNorm(w.t)).filter(Boolean)}
@@ -235,8 +235,8 @@ function memFinishAttempt(){
 function memAttemptSuccess(){
  memReviewVisible=false;window.memReviewVisible=false;
  memCounts[memPhase]++;memShow();render();
- $("mFeedback").textContent="ممتاز! تم التعرف على جميع كلمات الآية بالترتيب.";
- msg("✅ قراءة صحيحة بالكامل! "+memPhaseLabel()+" "+memCounts[memPhase]+"/3");
+ $("mFeedback").textContent="تمت مطابقة جميع كلمات الآية نصيًا وبالترتيب. لم يتم التحقق من صحة المد أو الغنة أو مخارج الحروف في الصوت.";
+ msg("✅ تمت مطابقة الكلمات نصيًا مع الآية "+memCounts[memPhase]+"/3. هذا ليس حكمًا على صحة التجويد صوتيًا.");
  setTimeout(()=>{
   if(!memOn)return;
   if(memCounts[memPhase]>=3){
@@ -248,7 +248,7 @@ function memAttemptSuccess(){
    }else if(memPhase==="recite"){
     const vl=vList(),k=vl.indexOf(mv);
     if(k+1<vl.length){memStart(vl[k+1]);msg("ما شاء الله! انتقلنا إلى الآية التالية.");}
-    else{memStart(vl[0]);msg("🎉 أتممت السورة: 3 استماع + 3 قراءة صحيحة + 3 تسميع صحيح.");}
+    else{memStart(vl[0]);msg("🎉 أتممت مراحل الحفظ ومطابقة الكلمات نصيًا. لا يعني ذلك أن التجويد أو المخارج تم التحقق منها صوتيًا.");}
    }
   }else{
    memShow();msg("✅ تكرار صحيح. ابدأ المحاولة التالية "+(memCounts[memPhase]+1)+"/3.");
