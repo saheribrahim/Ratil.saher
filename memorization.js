@@ -1,7 +1,7 @@
 // Ratil memorization flow: 3 listens, 3 verified readings, 3 verified recitations
 let memOn=false,mv=0,lim=1e9,vs=0,hintIdx=-1;
 let memPhase="listen",memCounts={listen:0,read:0,recite:0};
-let memAttemptActive=false,memAttemptTokens=[],memWordIndex=0,memAudioBusy=false,memAudioToken=0;
+let memAttemptActive=false,memAttemptTokens=[],memWordIndex=0,memAudioBusy=false,memAudioToken=0,memReviewVisible=false,memAttemptErrors=[];
 
 function vList(){return [...new Set(words.map(w=>w.v))]}
 function vRange(v){let a=-1,b=-1;words.forEach((w,i)=>{if(w.v===v){if(a<0)a=i;b=i+1}});return[a,b]}
@@ -11,7 +11,7 @@ function memShow(){
  const verseLines=$("text").children;
  Array.from(verseLines).forEach((line,k)=>{line.style.display=memOn&&k!==mv?"none":""});
  $("memBar").style.display=memOn?"block":"none";
- window.memOn=memOn;window.memPhase=memPhase;window.memAttemptActive=memAttemptActive;
+ window.memOn=memOn;window.memPhase=memPhase;window.memAttemptActive=memAttemptActive;window.memReviewVisible=memReviewVisible;
  if(!memOn){lim=1e9;$("text").classList.remove("mem");return}
  const range=vRange(mv);vs=range[0];lim=range[1];
  $("mPhase").textContent="المرحلة الحالية: "+memPhaseLabel();
@@ -25,10 +25,11 @@ function memShow(){
  });
  $("mStep").disabled=memAudioBusy;
  if(memPhase==="listen")$("mStep").textContent=memAudioBusy?"⏳ جارٍ تشغيل الآية…":"🔊 استمع للآية ("+(memCounts.listen+1)+"/3)";
- else if(memAttemptActive)$("mStep").textContent="⏹ إنهاء المحاولة";
+ else if(memAttemptActive)$("mStep").textContent="⏹ إنهاء المحاولة وتصحيحها";
  else $("mStep").textContent=(memPhase==="read"?"🎙 ابدأ القراءة ":"🎙 ابدأ التسميع ")+(memCounts[memPhase]+1)+"/3";
  $("mHint").style.display=memPhase==="recite"?"":"none";
- $("text").classList.toggle("mem",memPhase==="recite");
+ $("text").classList.toggle("mem",memPhase==="recite"&&!memReviewVisible);
+ $("mHelp").textContent=memPhase==="listen"?"استمع إلى الآية كاملة ثلاث مرات؛ اضغط زر الاستماع في كل مرة.":memPhase==="read"?"اقرأ الآية بصوتك. سيُظهر رتّل الكلمات الصحيحة والأخطاء ويطلب إعادة المحاولة حتى تطابق الآية.":"سمّع الآية من حفظك دون النظر إلى النص. بعد المحاولة ستظهر الكلمات التي تحتاج إلى تصحيح.";
 }
 function memReset(){
  const vl=vList();
@@ -116,9 +117,9 @@ function memBeginListen(){
  memPlaySources(sets,token);
 }
 function memBeginAttempt(){
- memAttemptTokens=[];memWordIndex=0;memAttemptActive=true;window.memAttemptActive=true;
- for(let i=vs;i<lim;i++)st[i]="todo";
- pos=vs;$("live").textContent="";render();memShow();
+ memAttemptTokens=[];memWordIndex=0;memAttemptErrors=[];memReviewVisible=false;memAttemptActive=true;window.memAttemptActive=true;window.memReviewVisible=false;
+ for(let i=vs;i<lim;i++){st[i]="todo";hd[i]=""}
+ pos=vs;$("live").textContent="";$("mProgress").textContent="";$("mFeedback").textContent="";render();memShow();
  start();
  if(!listening){memAttemptActive=false;window.memAttemptActive=false;memShow();msg("لم يبدأ الميكروفون. استخدم Chrome واسمح للموقع بالوصول إلى الميكروفون.",1);return}
  msg(memPhase==="read"?"🎙 اقرأ الآية كاملة بصوتك. سيقارن رتّل الكلمات التي يسمعها.":"🎙 سمّع الآية كاملة من حفظك. النص مخفي أثناء التسميع.");
@@ -126,52 +127,100 @@ function memBeginAttempt(){
 function memStep(){
  if(!memOn)return;
  if(memPhase==="listen"){if(!memAudioBusy)memBeginListen();return}
- if(memAttemptActive){
-  memCancelAttempt();
-  msg("انتهت المحاولة قبل اكتمال الآية؛ لن تُحتسب. اضغط الزر لإعادتها.");
-  return;
- }
+ if(memAttemptActive){memFinishAttempt();return;}
  memBeginAttempt();
 }
 function memCancelAttempt(){
  if(memAttemptActive){memAttemptActive=false;window.memAttemptActive=false;if(typeof listening!=="undefined"&&listening)stop()}
  memAttemptTokens=[];memWordIndex=0;
 }
+function memTargetEntries(){
+ return words.slice(vs,lim).map((w,i)=>({index:vs+i,n:w.n,text:w.t})).filter(x=>x.n);
+}
+function memUpdateFeedback(){
+ const errors=memAttemptErrors;
+ if(!errors.length){$("mFeedback").textContent="";return}
+ $("mFeedback").textContent=errors.map(e=>"الكلمة الصحيحة: "+e.expected+" — المسموع: "+e.heard).join("  |  ");
+}
 function memHandleTranscript(transcript){
  if(!memOn||!memAttemptActive||!["read","recite"].includes(memPhase))return;
- const tokens=String(transcript||"").split(/\s+/).map(norm).filter(Boolean);
+ const tokens=String(transcript||"").split(/\\s+/).map(norm).filter(Boolean);
  if(!tokens.length)return;
  memAttemptTokens.push(...tokens);
- const target=memTarget();
+ const target=memTargetEntries();
  for(const token of tokens){
-  if(memWordIndex<target.length&&token===target[memWordIndex])memWordIndex++;
+  if(memWordIndex>=target.length)break;
+  const current=target[memWordIndex];
+  if(token===current.n){
+   st[current.index]="ok";hd[current.index]="";memWordIndex++;continue;
+  }
+  let found=-1;
+  for(let j=memWordIndex+1;j<Math.min(memWordIndex+4,target.length);j++){
+   if(token===target[j].n){found=j;break}
+  }
+  if(found>=0){
+   for(let j=memWordIndex;j<found;j++){
+    const missed=target[j];st[missed.index]="miss";hd[missed.index]="لم تُسمع";
+    memAttemptErrors.push({expected:missed.text,heard:"لم تُسمع"});
+   }
+   const matched=target[found];st[matched.index]="ok";hd[matched.index]="";memWordIndex=found+1;
+  }else{
+   const score=typeof sim==="function"?sim(current.n,token):0;
+   const status=score>=0.68?"near":"miss";
+   st[current.index]=status;hd[current.index]=token;
+   memAttemptErrors.push({expected:current.text,heard:token,status});
+   memWordIndex++;
+  }
  }
  $("live").textContent=String(transcript||"");
- $("mProgress").textContent="تم التعرف على "+memWordIndex+" من "+target.length+" كلمة";
- if(memWordIndex>=target.length)memAttemptSuccess();
+ $("mProgress").textContent="مطابقة الكلمات: "+memWordIndex+"/"+target.length+" · الصحيحة: "+target.filter(x=>st[x.index]==="ok").length;
+ memUpdateFeedback();
+ render();memShow();
+ if(memWordIndex>=target.length)memFinishAttempt();
 }
-function memAttemptSuccess(){
+function memFinishAttempt(){
  if(!memAttemptActive)return;
  memAttemptActive=false;window.memAttemptActive=false;
  if(typeof listening!=="undefined"&&listening)stop();
- memCounts[memPhase]++;memShow();
- msg("✅ تم التعرف على الآية كاملة. "+memPhaseLabel()+" "+memCounts[memPhase]+"/3");
+ const target=memTargetEntries();
+ for(let i=memWordIndex;i<target.length;i++){
+  const item=target[i];st[item.index]="miss";hd[item.index]="لم تُسمع";
+  memAttemptErrors.push({expected:item.text,heard:"لم تُسمع",status:"miss"});
+ }
+ const exact=target.length>0&&target.every(x=>st[x.index]==="ok");
+ memReviewVisible=!exact;window.memReviewVisible=memReviewVisible;
+ $("mProgress").textContent="مطابقة الكلمات: "+target.filter(x=>st[x.index]==="ok").length+"/"+target.length+" · الأخطاء: "+memAttemptErrors.length;
+ if(exact){
+  memAttemptSuccess();
+ }else{
+  memShow();render();memUpdateFeedback();
+  msg("🔴 لم تطابق القراءة الآية بالكامل. راجع الكلمات الملوّنة، ثم أعد المحاولة. لم يُحتسب هذا التكرار.");
+ }
+}
+function memAttemptSuccess(){
+ memReviewVisible=false;window.memReviewVisible=false;
+ memCounts[memPhase]++;memShow();render();
+ $("mFeedback").textContent="ممتاز! تم التعرف على جميع كلمات الآية بالترتيب.";
+ msg("✅ قراءة صحيحة بالكامل! "+memPhaseLabel()+" "+memCounts[memPhase]+"/3");
  setTimeout(()=>{
   if(!memOn)return;
   if(memCounts[memPhase]>=3){
    if(memPhase==="read"){
-    memPhase="recite";memShow();render();
-    msg("📖 انتهت 3 قراءات. الآن أخفينا نص الآية: ابدأ التسميع من الذاكرة.");
+    memPhase="recite";memReviewVisible=false;window.memReviewVisible=false;
+    for(let i=vs;i<lim;i++){st[i]="todo";hd[i]=""}
+    render();memShow();
+    msg("📖 انتهت 3 قراءات صحيحة. الآن سمّع من ذاكرتك 3 مرات.");
    }else if(memPhase==="recite"){
     const vl=vList(),k=vl.indexOf(mv);
     if(k+1<vl.length){memStart(vl[k+1]);msg("ما شاء الله! انتقلنا إلى الآية التالية.");}
-    else{memStart(vl[0]);msg("🎉 أتممت السورة: 3 استماع + 3 قراءة + 3 تسميع.");}
+    else{memStart(vl[0]);msg("🎉 أتممت السورة: 3 استماع + 3 قراءة صحيحة + 3 تسميع صحيح.");}
    }
   }else{
    memShow();msg("✅ تكرار صحيح. ابدأ المحاولة التالية "+(memCounts[memPhase]+1)+"/3.");
   }
  },700);
 }
+
 $("hide").onchange=memToggle;
 $("mFrom").onchange=()=>{if(memOn)memStart(+$("mFrom").value)};
 $("mStep").onclick=memStep;
