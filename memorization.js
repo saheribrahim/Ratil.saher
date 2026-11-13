@@ -8,9 +8,9 @@ function vRange(v){let a=-1,b=-1;words.forEach((w,i)=>{if(w.v===v){if(a<0)a=i;b=
 // Strict Quran-word comparison: remove marks, but preserve real letter distinctions.
 function memNorm(s){
  return String(s||"")
-  .replace(/[\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]/g,"")
+  .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g,"")
   .replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي")
-  .replace(/[^\\u0621-\\u064A]/g,"");
+  .replace(/[^\u0621-\u064A]/g,"");
 }
 function memTarget(){return words.slice(vs,lim).map(w=>memNorm(w.t)).filter(Boolean)}
 function memPhaseLabel(){return memPhase==="listen"?"الاستماع":memPhase==="read"?"القراءة بصوتك":"التسميع من الذاكرة"}
