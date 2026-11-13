@@ -36,34 +36,26 @@ function alignBest(cands) {
     if (!tokens.length) continue;
     let cursor = pos;
     let localChanged = false;
+
     for (const token of tokens) {
       if (cursor >= words.length) break;
+
+      // لا ننتقل إلى الكلمة التالية إلا بعد مطابقة الكلمة الحالية تمامًا.
       if (token === words[cursor].n) {
         st[cursor] = "ok";
         cursor++;
         localChanged = true;
         continue;
       }
-      // ابحث عن الكلمة المنطوقة في الكلمات القليلة التالية؛ لا نسجل المحذوف إلا
-      // عندما تظهر كلمة لاحقة مطابقة تماماً، لتقليل الإنذارات الكاذبة.
-      let found = -1;
-      for (let j = cursor + 1; j <= Math.min(cursor + 3, words.length - 1); j++) {
-        if (token === words[j].n) { found = j; break; }
-      }
-      if (found !== -1) {
-        for (let j = cursor; j < found; j++) st[j] = "miss";
-        st[found] = "ok";
-        cursor = found + 1;
-        localChanged = true;
-        continue;
-      }
-      // كلمة قريبة تُعرض كاحتمال للمراجعة، ولا تُحسب صحيحة.
-      if (sim(words[cursor].n, token) >= 0.72) {
-        st[cursor] = "near";
-        cursor++;
-        localChanged = true;
-      }
+
+      // الخطأ القريب أصفر للمراجعة، والخطأ الواضح أحمر.
+      // يظل المؤشر على نفس الكلمة، ونتجاهل بقية الكلمات حتى تُنطق صحيحة.
+      const score = sim(words[cursor].n, token);
+      st[cursor] = score >= 0.72 ? "near" : "miss";
+      localChanged = true;
+      break;
     }
+
     if (localChanged) {
       pos = cursor;
       changed = true;
