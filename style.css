@@ -114,3 +114,9 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 #memBar #mSt,#memBar #mProgress{font-size:13px;color:var(--mute);min-height:18px}
 #memBar #mStep{min-width:210px}
 @media(max-width:520px){.mem-stages{grid-template-columns:1fr}.mem-stage{flex-direction:row;justify-content:space-between}.mem-stage span{font-size:16px}}
+
+/* Word-by-word correction during reading and recitation */
+.mem .w, .mem .w.ok, .mem .w.near, .mem .w.miss, .mem .w i, .mem .w.ok i, .mem .w.near i, .mem .w.miss i { color: transparent !important; text-shadow: none !important; }
+.mem .w { background: var(--line) !important; }
+.mem .w.cur { background: var(--cur) !important; }
+.mem-feedback { margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.8; white-space: normal; }
