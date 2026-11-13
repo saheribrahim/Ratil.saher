@@ -146,7 +146,7 @@ function render() {
   // تفعيل أو إلغاء تفعيل خصائص التجويد والحفظ على حاوية النص الرئيسية
   const memOn = typeof window.memOn !== "undefined" ? window.memOn : false;
   if ($("text")) {
-    $("text").classList.toggle("mem", memOn && window.memPhase === "recite");
+    $("text").classList.toggle("mem", memOn && window.memPhase === "recite" && !window.memReviewVisible);
     if ($("mMask")) $("text").classList.toggle("fl", $("mMask").value === "fl");
     
     // ربط زر أحكام التجويد بصرياً بشكل مباشر
