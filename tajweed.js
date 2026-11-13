@@ -63,7 +63,9 @@ function tjRuleSet(index){
     else tjAdd(result,"g","إظهار شفوي","ميم ساكنة قبل غير الباء والميم.");
   });
 
-  // Common madd categories inferred from written letters and marks.
+  // Madd labels are shown only for explicit written causes.
+  // Basic natural-madd and separated-madd labels are intentionally omitted:
+  // a text-only heuristic must not guess from alif wasl or ordinary spelling.
   current.forEach((c,i)=>{
     const p=current[i-1];
     const isAlif=(c.base==="ا"||c.base==="آ")&&(c.base==="آ"||(p&&p.marks.includes("\u064E")));
@@ -72,13 +74,10 @@ function tjRuleSet(index){
     if(!isAlif&&!isWaw&&!isYa)return;
     const before=p&&"ءأإؤئآ".includes(p.base);
     const after=current[i+1]||null;
-    const nextWordBeginsHamza=i===current.length-1&&next.length&&"ءأإؤئآٱ".includes(next[0].base);
-    if(c.base==="آ"||before)tjAdd(result,"m","مد بدل","همزة قبل حرف المد في الكلمة.");
+    if(c.base==="آ"||before)tjAdd(result,"m","مد بدل","موضع محتمل لمد البدل من الرسم؛ يحتاج مراجعة نص المصحف.");
     else if(after&&"ءأإؤئ".includes(after.base))tjAdd(result,"m","مد واجب متصل","حرف المد وبعده همزة في الكلمة نفسها.");
-    else if(nextWordBeginsHamza)tjAdd(result,"m","مد جائز منفصل","حرف المد في آخر كلمة والهمزة في أول الكلمة التالية.");
     else if(after&&(after.marks.includes("\u0651")||after.marks.includes("\u0652")))tjAdd(result,"m","مد لازم كلمي","حرف المد يليه سكون أصلي أو حرف مشدد في الكلمة.");
-    else if(isVerseEnd&&i===current.length-2)tjAdd(result,"m","مد عارض للسكون عند الوقف","يظهر هذا الحكم عند الوقف على نهاية الآية، وليس عند الوصل.");
-    else tjAdd(result,"m","مد طبيعي","حرف مد ظاهر من الحركات المكتوبة؛ مقدار الأداء لا يُقاس من النص.");
+    // Natural madd and separated madd are intentionally not displayed.
   });
 
   // Solar / lunar lam.
@@ -95,17 +94,6 @@ function tjRuleSet(index){
     else tjAdd(result,"id","تفخيم لام لفظ الجلالة","الأصل التفخيم عند عدم سبق كسر؛ تُراجع مواضع الابتداء والوصل.");
   }
 
-  // Basic ra cases only; exceptions and complex waqf cases need a qualified review.
-  current.forEach((c,i)=>{
-    if(c.base!=="ر")return;
-    if(c.marks.includes("\u064E")||c.marks.includes("\u064F"))tjAdd(result,"q","تفخيم الراء (بحركتها)","الراء مفتوحة أو مضمومة في النص.");
-    else if(c.marks.includes("\u0650"))tjAdd(result,"id","ترقيق الراء (بحركتها)","الراء مكسورة في النص.");
-    else if(c.marks.includes("\u0652")){
-      const before=current[i-1]||prev[prev.length-1]||null;
-      if(before&&(before.marks.includes("\u064E")||before.marks.includes("\u064F")))tjAdd(result,"q","تفخيم الراء (بحسب ما قبلها)","الراء ساكنة وقبلها فتح أو ضم ظاهر.");
-      else if(before&&(before.marks.includes("\u0650")||before.base==="ي"))tjAdd(result,"id","ترقيق الراء (بحسب ما قبلها)","الراء ساكنة وقبلها كسر أو ياء.");
-    }
-  });
   return result;
 }
 
@@ -119,7 +107,7 @@ function tjRenderReport(){
   if(!words.length){note.textContent="حمّل نص الآية أولًا.";return;}
   const fullyMarked=words.some(w=>/[\u064B-\u065F\u0670]/.test(w.t));
   note.textContent=(fullyMarked
-    ?"الأحكام التالية مستخرجة من حروف النص وتشكيله، وليست حكمًا على صوت القارئ. المد ومقدار الغنة والمخارج لا تُعتمد إلا بتحليل صوتي متخصص."
+    ?"الأحكام التالية مستخرجة من حروف النص وتشكيله، وليست حكمًا على صوت القارئ. مقدار المد والغنة ومخارج الحروف لا تُعتمد إلا بتحليل صوتي متخصص. لا يعرض هذا التقرير المد الطبيعي أو المنفصل أو تفخيم/ترقيق الراء بتخمين نصي."
     :"النص الحالي غير مشكول بالكامل؛ لذلك لا يمكن استخراج أحكام تعتمد على الحركات والسكون بثقة. حمّل نص المصحف المشكول.")
     +" أحكام الوقف مشروطة بالوقوف على نهاية الآية.";
   let total=0;
