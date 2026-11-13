@@ -1,0 +1,102 @@
+name: Vendor Quran AI assets into Ratil
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/vendor-quran-ai.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vendor-quran-ai
+  cancel-in-progress: false
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Ratil
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Vendor Transformers.js and its ONNX WebAssembly runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p vendor/transformers
+          WORK="$(mktemp -d)"
+          cd "$WORK"
+          npm pack --silent @huggingface/transformers@3.8.1
+          tar -xzf huggingface-transformers-3.8.1.tgz
+          test -s package/dist/transformers.min.js
+          cp package/dist/transformers.min.js "$GITHUB_WORKSPACE/vendor/transformers/"
+          find package/dist -maxdepth 1 -type f \\( -name 'ort-wasm*.mjs' -o -name 'ort-wasm*.wasm' \\) -exec cp {} "$GITHUB_WORKSPACE/vendor/transformers/" \\;
+          test -n "$(find "$GITHUB_WORKSPACE/vendor/transformers" -name 'ort-wasm*.wasm' -print -quit)"
+          cp package/LICENSE "$GITHUB_WORKSPACE/vendor/transformers/LICENSE-transformers.txt"
+          echo "Vendored runtime assets:"
+          ls -lh "$GITHUB_WORKSPACE/vendor/transformers"
+
+      - name: Vendor the Quran-specific ONNX model
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="Mustanad/whisper-base-ar-quran-onnx"
+          MODEL_DIR="$GITHUB_WORKSPACE/models/whisper-base-ar-quran-onnx"
+          mkdir -p "$MODEL_DIR/onnx"
+          REV="$(curl --fail --silent --show-error "https://huggingface.co/api/models/$REPO" | python -c 'import json,sys; print(json.load(sys.stdin)["sha"])')"
+          BASE="https://huggingface.co/$REPO/resolve/$REV"
+          files=(
+            added_tokens.json
+            config.json
+            generation_config.json
+            merges.txt
+            normalizer.json
+            preprocessor_config.json
+            special_tokens_map.json
+            tokenizer.json
+            tokenizer_config.json
+            vocab.json
+            onnx/encoder_model_quantized.onnx
+            onnx/decoder_model_merged_quantized.onnx
+          )
+          for file in "${files[@]}"; do
+            mkdir -p "$MODEL_DIR/$(dirname "$file")"
+            curl --fail --location --retry 3 --retry-all-errors --silent --show-error "$BASE/$file" -o "$MODEL_DIR/$file"
+            bytes="$(wc -c < "$MODEL_DIR/$file")"
+            if [ "$bytes" -gt 99000000 ]; then
+              echo "File exceeds safe GitHub per-file limit: $file ($bytes bytes)" >&2
+              exit 1
+            fi
+            echo "$file: $bytes bytes"
+          done
+          printf '%s\n' \
+            "Model: $REPO" \
+            "Revision: $REV" \
+            "Format: ONNX, dynamic 8-bit quantization" \
+            "Purpose: Quran recitation speech-to-text; this model does not score tajweed, vowels, or makharij." \
+            "Lineage and credits: OpenAI Whisper Base and Tarteel AI Quran fine-tune; ONNX conversion by Mustanad." \
+            "License stated by upstream model card: Apache-2.0." \
+            "Source: https://huggingface.co/$REPO" \
+            > "$MODEL_DIR/MODEL-ATTRIBUTION.txt"
+          curl --fail --location --silent --show-error https://www.apache.org/licenses/LICENSE-2.0.txt -o "$MODEL_DIR/LICENSE-Apache-2.0.txt"
+
+      - name: Commit vendored assets into Ratil
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendor/transformers models/whisper-base-ar-quran-onnx
+          git diff --cached --check
+          git commit -m "Vendor Quran AI model and browser runtime"
+          git push origin HEAD:main
