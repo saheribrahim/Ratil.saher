@@ -183,30 +183,35 @@ function memHandleTranscript(transcript){
  if(!tokens.length)return;
  memAttemptTokens.push(...tokens);
  const target=memTargetEntries();
+
  for(const token of tokens){
   if(memWordIndex>=target.length)break;
   const current=target[memWordIndex];
+
+  // لا نلوّن الكلمة التالية ولا نتقدم إليها إلا بعد مطابقة الحالية.
   if(token===current.n){
-   st[current.index]="ok";hd[current.index]="";memWordIndex++;continue;
-  }
-  let found=-1;
-  for(let j=memWordIndex+1;j<Math.min(memWordIndex+4,target.length);j++){
-   if(token===target[j].n){found=j;break}
-  }
-  if(found>=0){
-   for(let j=memWordIndex;j<found;j++){
-    const missed=target[j];st[missed.index]="miss";hd[missed.index]="لم تُسمع";
-    memAttemptErrors.push({expected:missed.text,heard:"لم تُسمع"});
-   }
-   const matched=target[found];st[matched.index]="ok";hd[matched.index]="";memWordIndex=found+1;
-  }else{
-   const score=typeof sim==="function"?sim(current.n,token):0;
-   const status=score>=0.68?"near":"miss";
-   st[current.index]=status;hd[current.index]=token;
-   memAttemptErrors.push({expected:current.text,heard:token,status});
+   st[current.index]="ok";
+   hd[current.index]="";
+   memAttemptErrors=memAttemptErrors.filter(error=>error.index!==current.index);
    memWordIndex++;
+   continue;
   }
+
+  const score=typeof sim==="function"?sim(current.n,token):0;
+  const status=score>=0.68?"near":"miss";
+  st[current.index]=status;
+  hd[current.index]=token;
+
+  // احتفظ بآخر خطأ للكلمة نفسها بدل تكرار رسائل الخطأ مع كل مقطع.
+  const error={index:current.index,expected:current.text,heard:token,status};
+  const existing=memAttemptErrors.findIndex(item=>item.index===current.index);
+  if(existing>=0)memAttemptErrors[existing]=error;
+  else memAttemptErrors.push(error);
+
+  // قف هنا: بقية الكلمات المسموعة لا تُقبل قبل تصحيح هذه الكلمة.
+  break;
  }
+
  $("live").textContent=String(transcript||"");
  $("mProgress").textContent="مطابقة الكلمات: "+memWordIndex+"/"+target.length+" · الصحيحة: "+target.filter(x=>st[x.index]==="ok").length;
  memUpdateFeedback();
