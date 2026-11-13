@@ -33,8 +33,6 @@ function tjRuleSet(index){
 
   // Ghunnah and qalqalah signs explicitly present in the written text.
   current.forEach(c=>{
-    if(c.base==="ن"&&c.marks.includes("\u0651"))tjAdd(result,"g","غنة نون مشددة","النون عليها شدة في النص؛ مقدار الأداء يحتاج سماعًا.");
-    if(c.base==="م"&&c.marks.includes("\u0651"))tjAdd(result,"g","غنة ميم مشددة","الميم عليها شدة في النص؛ مقدار الأداء يحتاج سماعًا.");
     if("قطبجد".includes(c.base)&&c.marks.includes("\u0652"))tjAdd(result,"q","قلقلة","حرف من قطب جد عليه سكون في النص.");
   });
 
