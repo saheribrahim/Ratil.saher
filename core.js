@@ -193,17 +193,24 @@ function spawn(SR) {
   rec.onresult = e => {
     let interim = "";
     let candidates = [];
-    let finalText = [];
+    let finalCandidates = [];
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const res = e.results[i];
-      for (let k = 0; k < res.length; k++) candidates.push(res[k].transcript);
+      const alternatives = [];
+      for (let k = 0; k < res.length; k++) {
+        candidates.push(res[k].transcript);
+        alternatives.push(res[k].transcript);
+      }
       if (!res.isFinal) interim += res[0].transcript;
-      else finalText.push(res[0].transcript);
+      else finalCandidates.push(alternatives);
     }
     if ($("live") && interim.trim()) $("live").textContent = interim.trim();
     if (window.memOn) {
-      if (window.memAttemptActive && typeof window.memHandleTranscript === "function") {
-        finalText.forEach(t => window.memHandleTranscript(t));
+      if (window.memAttemptActive) {
+        finalCandidates.forEach(items => {
+          if (typeof window.memHandleCandidates === "function") window.memHandleCandidates(items);
+          else if (typeof window.memHandleTranscript === "function") window.memHandleTranscript(items[0] || "");
+        });
       }
     } else {
       alignBest(candidates.map(t => t.split(/\s+/).map(norm).filter(Boolean)));
@@ -211,7 +218,9 @@ function spawn(SR) {
   };
   rec.onerror = e => {
     if (e.error !== "no-speech" && e.error !== "aborted") {
-      msg("Recognition error: " + e.error, true);
+      msg(window.memOn
+        ? "تعذّر التعرف على التلاوة من الميكروفون (" + e.error + "). تحقق من إذن الميكروفون والإنترنت ثم أعد المحاولة."
+        : "Recognition error: " + e.error, true);
     }
   };
   
