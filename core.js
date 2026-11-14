@@ -119,7 +119,7 @@ function load() {
   verses.forEach((v, vi) => {
     const line = document.createElement("span");
     line.className = "v";
-    v.split(/\s+/).filter(Boolean).forEach(t => {
+    v.replace(/[\u200B\u2060\uFEFF\u00A0\u202F]/g, " ").split(/\s+/).filter(Boolean).forEach(t => {
       const n = norm(t);
       if (!n && words.length && words[words.length - 1].el.parentNode === line) {
         words[words.length - 1].t += t;
