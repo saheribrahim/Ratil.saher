@@ -46,8 +46,11 @@ button.rec { background: var(--miss); border-color: var(--miss); color: #fff; }
 label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--mute); cursor: pointer; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; }
 
-#text { direction: rtl; text-align: center; white-space: normal; font-family: "RatilQuranpedia", "Amiri Quran", "Traditional Arabic", serif; font-size: 32px; line-height: 2.4; }
-.v { display: block; margin-bottom: 6px; }
+#text { direction: rtl; text-align: justify; text-align-last: center; white-space: normal; font-family: "RatilQuranpedia", "Amiri Quran", "Traditional Arabic", serif; font-size: 32px; line-height: 2.55; }
+.surah-heading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: min(100%, 560px); margin: 0 auto 18px; padding: 10px 12px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); text-align: center; }
+.surah-title { font-size: .92em; font-weight: 700; line-height: 1.8; }
+.surah-basmalah { font-size: .92em; line-height: 2; white-space: nowrap; }
+.v { display: inline; margin: 0; word-spacing: .12em; }
 .w { display: inline-block; padding: 0; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; }
 /* Keep a clear space between Quranic words, matching the requested mushaf style. */
 #text .v { word-spacing: .12em; }
@@ -59,7 +62,7 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .w.cur { background: var(--cur); }
 .hide .w.todo:not(.cur) { filter: blur(7px); }
 
-.num { color: var(--mute); font-size: 22px; padding: 0 4px; }
+.num { color: var(--accent); font-size: .68em; padding: 0 .28em; white-space: nowrap; }
 .stats { display: flex; gap: 10px; margin-top: 12px; }
 .stat { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; }
 .stat b { display: block; font-size: 22px; }
@@ -137,3 +140,5 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .tj-empty{margin:0;color:var(--mute);font-size:13px}
 .mem-truth-note{margin:0;padding:8px 10px;border-right:3px solid var(--accent);border-radius:8px;background:var(--bg);color:var(--mute);font-size:12px;line-height:1.8}
 @media(max-width:520px){.tj-report-row{grid-template-columns:1fr;gap:5px}.tj-report-word{font-size:24px}}
+
+@media(max-width:520px){#text{font-size:27px;line-height:2.45}.surah-heading{margin-bottom:14px}.surah-basmalah{font-size:.86em}}
