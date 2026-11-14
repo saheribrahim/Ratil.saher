@@ -130,12 +130,12 @@ function load() {
       s.className = "w todo";
       s.textContent = t;
       line.appendChild(s);
-      line.appendChild(document.createTextNode(" "));
       words.push({ el: s, n, t, v: vi });
     });
     const num = document.createElement("span");
     num.className = "num";
     num.textContent = "۝" + ad(vi + 1);
+    line.appendChild(document.createTextNode(" "));
     line.appendChild(num);
     box.appendChild(line);
   });
