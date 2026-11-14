@@ -232,5 +232,5 @@
     silenceMs = 0;
   }
 
-  window.RatilQuranAI = { start, stop, modelName: MODEL_ID };
+  window.RatilQuranAI = { start, stop, whenIdle: () => queue, modelName: MODEL_ID };
 })();
