@@ -126,6 +126,8 @@ function load() {
         words[words.length - 1].el.textContent += t;
         return;
       }
+      // Add an actual whitespace character between each Quran word.
+      if (line.childNodes.length) line.appendChild(document.createTextNode(" "));
       const s = document.createElement("span");
       s.className = "w todo";
       s.textContent = t;
