@@ -48,8 +48,8 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 
 #text { direction: rtl; text-align: center; white-space: normal; font-family: Tahoma, Arial, sans-serif !important; word-spacing: .18em; font-size: 32px; line-height: 2.4; }
 .surah-title { display: block; margin: 0 0 8px; font-size: .78em; line-height: 1.8; font-weight: 700; text-align: center; }
-.v { display: block; width: 100%; margin: 0 0 .08em; white-space: normal; }
-.w + .w { margin-inline-start: .16em; }
+.v { display: flex; flex-wrap: wrap; flex-direction: row; direction: rtl; justify-content: center; align-items: baseline; column-gap: .32em; row-gap: .08em; width: 100%; margin: 0 0 .12em; white-space: normal; }
+.w + .w { margin-inline-start: 0; }
 .w { display: inline-block; padding: 0; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: Tahoma, Arial, sans-serif !important; }
 
 .w.ok { color: var(--ok); }
