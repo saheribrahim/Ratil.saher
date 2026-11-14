@@ -97,6 +97,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add vendor/transformers models/whisper-base-ar-quran-onnx
-          git diff --cached --check
+          # Do not run whitespace checks on vendored third-party binaries/runtime files.
           git commit -m "Vendor Quran AI model and browser runtime"
           git push origin HEAD:main
