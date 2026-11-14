@@ -46,11 +46,12 @@ button.rec { background: var(--miss); border-color: var(--miss); color: #fff; }
 label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--mute); cursor: pointer; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; }
 
-#text { direction: rtl; text-align: justify; text-align-last: center; font-family: var(--quranpedia-font, "Amiri Quran"), "Traditional Arabic", serif; font-size: clamp(29px, 4.8vw, 38px); line-height: 2.35; font-kerning: normal; }
-/* Mushaf-style continuous ayah flow: words wrap naturally and ayah signs stay inline. */
-#text .v { display: inline; margin: 0; word-spacing: .12em; }
-.w { display: inline; padding: 0 .035em; margin: 0; border-radius: 5px; transition: color .2s, background .2s; cursor: pointer; }
-.num { display: inline; color: var(--mute); font-size: .72em; padding: 0 .16em; white-space: nowrap; }
+#text { direction: rtl; text-align: center; font-family: "Amiri Quran", "Traditional Arabic", serif; font-size: 32px; line-height: 2.4; }
+.v { display: block; margin-bottom: 6px; }
+.w { display: inline-block; padding: 0 5px; margin-inline: .14em; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; }
+/* Keep a clear visual gap between every Quran word in every surah. */
+#text .v { word-spacing: .18em; }
+#text .w + .w { margin-inline-start: .2em; }
 
 .w.ok { color: var(--ok); }
 .w.near { color: var(--near); }
