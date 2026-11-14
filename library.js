@@ -42,7 +42,7 @@ function fillR(selectedId) {
   rows.forEach(m => {
     const o = document.createElement("option");
     o.value = String(m.id);
-    o.textContent = m.name || m.rawi?.full_name || ("مصحف " + m.id);
+    o.textContent = m.rawi?.full_name || m.name || ("مصحف " + m.id);
     const detail = [m.rawi?.full_name, m.description].filter(Boolean).join(" — ");
     if (detail) o.title = detail;
     sel.appendChild(o);
@@ -101,8 +101,8 @@ function removeLeadingBasmala(text, surahId) {
 function applyMushafFont(meta) {
   if (!meta) return;
   let fontUrl = meta.font_file || "";
-  // Quranpedia's current KFGQPC Hafs text uses the v3 font for the new Uthmani marks.
-  if (!fontUrl && [1, 2].includes(Number(meta.id))) {
+  // Quranpedia documents that these KFGQPC Uthmani editions require the v3 font.
+  if ([1, 2, 4, 5, 6, 7, 9, 10].includes(Number(meta.id))) {
     fontUrl = "https://api.quranpedia.net/assets/fonts/arabic/UthmanicHafs-v-3.0.ttf";
   }
   const styleId = "quranpedia-mushaf-font";
