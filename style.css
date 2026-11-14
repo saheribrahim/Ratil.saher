@@ -47,11 +47,9 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; }
 
 #text { direction: rtl; text-align: center; white-space: normal; font-family: "RatilQuranpedia", "Amiri Quran", "Traditional Arabic", serif; font-size: 32px; line-height: 2.4; }
-.v { display: block; margin-bottom: 6px; word-spacing: .12em; }
+.surah-title { display: block; margin: 0 0 8px; font-size: .78em; line-height: 1.8; font-weight: 700; text-align: center; }
+.v { display: inline; margin: 0; }
 .w { display: inline-block; padding: 0; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; }
-/* Keep a clear space between Quranic words, matching the requested mushaf style. */
-#text .v { word-spacing: .12em; }
-#text .w + .w { margin-inline-start: .18em; }
 
 .w.ok { color: var(--ok); }
 .w.near { color: var(--near); }
@@ -138,3 +136,5 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .mem-truth-note{margin:0;padding:8px 10px;border-right:3px solid var(--accent);border-radius:8px;background:var(--bg);color:var(--mute);font-size:12px;line-height:1.8}
 @media(max-width:520px){.tj-report-row{grid-template-columns:1fr;gap:5px}.tj-report-word{font-size:24px}}
 
+
+@media(max-width:520px){#text{font-size:27px;line-height:2.35}.surah-title{margin-bottom:6px}}
