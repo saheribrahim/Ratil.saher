@@ -32,6 +32,30 @@ function htmlOf(i) {
   return words[i] ? words[i].t : "";
 }
 
+// The basmala is displayed as a surah heading, not counted as an ayah
+// (except in Al-Fatiha, where it is already ayah 1; At-Tawbah has no basmala).
+function addSurahHeading(box) {
+  const surahNumber = Number($("surah") && $("surah").value) || 1;
+  const surahName = (typeof NAMES !== "undefined" && NAMES[surahNumber - 1]) || "";
+  const heading = document.createElement("div");
+  heading.className = "surah-heading";
+
+  const title = document.createElement("div");
+  title.className = "surah-title";
+  title.textContent = "سُورَةُ " + surahName;
+  heading.appendChild(title);
+
+  if (surahNumber !== 1 && surahNumber !== 9) {
+    const basmala = document.createElement("div");
+    basmala.className = "surah-basmalah";
+    basmala.lang = "ar";
+    basmala.textContent = "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ";
+    heading.appendChild(basmala);
+  }
+
+  box.appendChild(heading);
+}
+
 // تجاهل الكلمات المكررة من نهاية المقطع السابق، دون تخطي الكلمة الحالية.
 function isRecentConfirmedToken(token, cursor) {
   const from = Math.max(0, cursor - 3);
@@ -115,6 +139,7 @@ function load() {
   const box = $("text");
   if (!box) return;
   box.innerHTML = "";
+  addSurahHeading(box);
   
   verses.forEach((v, vi) => {
     const line = document.createElement("span");
@@ -139,6 +164,7 @@ function load() {
     num.textContent = "۝" + ad(vi + 1);
     line.appendChild(document.createTextNode(" "));
     line.appendChild(num);
+    line.appendChild(document.createTextNode(" "));
     box.appendChild(line);
   });
   
