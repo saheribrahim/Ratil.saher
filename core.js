@@ -124,7 +124,7 @@ function load() {
   box.appendChild(title);
   
   verses.forEach((v, vi) => {
-    const line = document.createElement("span");
+    const line = document.createElement("div");
     line.className = "v";
     v.replace(/[\u200B\u2060\uFEFF\u00A0\u202F]/g, " ").split(/\s+/).filter(Boolean).forEach(t => {
       const n = norm(t);
