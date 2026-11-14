@@ -1,7 +1,7 @@
 // Ratil memorization flow: 3 listens, 3 verified readings, 3 verified recitations
 let memOn=false,mv=0,lim=1e9,vs=0,hintIdx=-1;
 let memPhase="listen",memCounts={listen:0,read:0,recite:0};
-let memAttemptActive=false,memAttemptTokens=[],memWordIndex=0,memAudioBusy=false,memAudioToken=0,memReviewVisible=false,memAttemptErrors=[];
+let memFinalizing=false,memAttemptActive=false,memAttemptTokens=[],memWordIndex=0,memAudioBusy=false,memAudioToken=0,memReviewVisible=false,memAttemptErrors=[];
 
 function vList(){return [...new Set(words.map(w=>w.v))]}
 function vRange(v){let a=-1,b=-1;words.forEach((w,i)=>{if(w.v===v){if(a<0)a=i;b=i+1}});return[a,b]}
@@ -124,6 +124,7 @@ function memBeginListen(){
  memPlaySources(sets,token);
 }
 function memBeginAttempt(){
+ if(memFinalizing)return;
  memAttemptTokens=[];memWordIndex=0;memAttemptErrors=[];memReviewVisible=false;memAttemptActive=true;window.memAttemptActive=true;window.memReviewVisible=false;
  for(let i=vs;i<lim;i++){st[i]="todo";hd[i]=""}
  pos=vs;$("live").textContent="";$("mProgress").textContent="";$("mFeedback").textContent="";render();memShow();
@@ -218,10 +219,15 @@ function memHandleTranscript(transcript){
  render();memShow();
  if(memWordIndex>=target.length)memFinishAttempt();
 }
-function memFinishAttempt(){
- if(!memAttemptActive)return;
- memAttemptActive=false;window.memAttemptActive=false;
+async function memFinishAttempt(){
+ if(!memAttemptActive||memFinalizing)return;
+ memFinalizing=true;
+ // Flush the last audio segment and wait for the local model before judging the attempt.
  if(typeof listening!=="undefined"&&listening)stop();
+ if(window.RatilQuranAI&&typeof window.RatilQuranAI.whenIdle==="function"){
+  try{await window.RatilQuranAI.whenIdle()}catch(_){}
+ }
+ memAttemptActive=false;window.memAttemptActive=false;
  const target=memTargetEntries();
  for(let i=memWordIndex;i<target.length;i++){
   const item=target[i];st[item.index]="miss";hd[item.index]="لم تُسمع";
@@ -230,11 +236,12 @@ function memFinishAttempt(){
  const exact=target.length>0&&target.every(x=>st[x.index]==="ok");
  memReviewVisible=!exact;window.memReviewVisible=memReviewVisible;
  $("mProgress").textContent="مطابقة الكلمات: "+target.filter(x=>st[x.index]==="ok").length+"/"+target.length+" · الأخطاء: "+memAttemptErrors.length;
+ memFinalizing=false;
  if(exact){
   memAttemptSuccess();
  }else{
   memShow();render();memUpdateFeedback();
-  msg("🔴 لم تطابق القراءة الآية بالكامل. راجع الكلمات الملوّنة، ثم أعد المحاولة. لم يُحتسب هذا التكرار.");
+  msg("🔴 لم تكتمل مطابقة كلمات الآية. صحّح الكلمة الملوّنة ثم أعد المحاولة.");
  }
 }
 function memAttemptSuccess(){
