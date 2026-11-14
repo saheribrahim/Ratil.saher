@@ -15,7 +15,7 @@ function memNorm(s){
 function memTarget(){return words.slice(vs,lim).map(w=>memNorm(w.t)).filter(Boolean)}
 function memPhaseLabel(){return memPhase==="listen"?"الاستماع":memPhase==="read"?"القراءة بصوتك":"التسميع من الذاكرة"}
 function memShow(){
- const verseLines=$("text").children;
+ const verseLines=$("text").querySelectorAll(".v");
  Array.from(verseLines).forEach((line,k)=>{line.style.display=memOn&&k!==mv?"none":""});
  $("memBar").style.display=memOn?"block":"none";
  window.memOn=memOn;window.memPhase=memPhase;window.memAttemptActive=memAttemptActive;window.memReviewVisible=memReviewVisible;
