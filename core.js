@@ -3,7 +3,12 @@
 // ============================================================================
 
 const $ = id => document.getElementById(id);
-const norm = s => s.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/[^\u0621-\u064A]/g, "");
+const norm = s => String(s || "")
+  .normalize("NFC")
+  .replace(/[\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]/g, "")
+  .replace(/[أإآٱ]/g, "ا")
+  .replace(/ى/g, "ي")
+  .replace(/[^\\u0621-\\u064A]/g, "");
 
 function sim(a, b) {
   if (a === b) return 1;
@@ -27,43 +32,81 @@ function htmlOf(i) {
   return words[i] ? words[i].t : "";
 }
 
-// مطابقة تسلسلية محافظة: الأخضر للمطابقة النصية التامة فقط.
+// تجاهل الكلمات المكررة من نهاية المقطع السابق، دون تخطي الكلمة الحالية.
+function isRecentConfirmedToken(token, cursor) {
+  const from = Math.max(0, cursor - 3);
+  for (let i = from; i < cursor; i++) {
+    if (words[i] && words[i].n === token && st[i] === "ok") return true;
+  }
+  return false;
+}
+
+// مطابقة تسلسلية: لا نتقدم إلا عند تطابق الكلمة الحالية، مع معالجة تداخل المقاطع.
 function alignBest(cands) {
   if (!words.length || !Array.isArray(cands) || !cands.length) return;
-  let changed = false;
+
+  let selected = null;
+  let selectedScore = -Infinity;
+
   for (const rawTokens of cands) {
-    const tokens = (rawTokens || []).filter(Boolean);
+    const tokens = (rawTokens || []).map(norm).filter(Boolean);
     if (!tokens.length) continue;
+
     let cursor = pos;
-    let localChanged = false;
+    let matched = 0;
+    let overlap = 0;
+    let mismatch = false;
 
     for (const token of tokens) {
       if (cursor >= words.length) break;
-
-      // لا ننتقل إلى الكلمة التالية إلا بعد مطابقة الكلمة الحالية تمامًا.
       if (token === words[cursor].n) {
-        st[cursor] = "ok";
+        matched++;
         cursor++;
-        localChanged = true;
-        continue;
+      } else if (isRecentConfirmedToken(token, cursor)) {
+        overlap++;
+      } else {
+        mismatch = true;
+        break;
       }
-
-      // الخطأ القريب أصفر للمراجعة، والخطأ الواضح أحمر.
-      // يظل المؤشر على نفس الكلمة، ونتجاهل بقية الكلمات حتى تُنطق صحيحة.
-      const score = sim(words[cursor].n, token);
-      st[cursor] = score >= 0.72 ? "near" : "miss";
-      localChanged = true;
-      break;
     }
 
-    if (localChanged) {
-      pos = cursor;
-      changed = true;
-      break;
+    const score = matched * 100 + overlap * 2 - (mismatch ? 40 : 0);
+    if (score > selectedScore) {
+      selectedScore = score;
+      selected = tokens;
     }
   }
-  if (changed) render();
+
+  if (!selected) return;
+
+  let cursor = pos;
+  let changed = false;
+
+  for (const token of selected) {
+    if (cursor >= words.length) break;
+
+    if (token === words[cursor].n) {
+      st[cursor] = "ok";
+      cursor++;
+      changed = true;
+      continue;
+    }
+
+    if (isRecentConfirmedToken(token, cursor)) continue;
+
+    const score = sim(words[cursor].n, token);
+    st[cursor] = score >= 0.72 ? "near" : "miss";
+    changed = true;
+    break;
+  }
+
+  if (changed) {
+    pos = cursor;
+    render();
+  }
 }
+
+window.alignBest = alignBest;
 
 // تحميل الآيات
 function load() {
@@ -128,7 +171,7 @@ function render() {
   const tot = ok + near + miss;
   const acc = tot ? Math.round((ok + near * .5) / tot * 100) : 0;
   if ($("gm")) $("gm").style.left = (tot ? acc : 0) + "%";
-  if ($("gt")) $("gt").textContent = !tot ? "ابدأ التلاوة لتظهر نتيجتك · Start reciting to see your score" : acc >= 85 ? "🟢 " + acc + "% ممتاز — استمر · Excellent" : acc >= 60 ? "🟡 " + acc + "% جيد — راجع الكلمات الحمراء · Good, review the red words" : "🔴 " + acc + "% حسّن نفسك — راجع وكرّر · Keep practicing";
+  if ($("gt")) $("gt").textContent = !tot ? "ابدأ التلاوة لمتابعة المطابقة النصية" : "مؤشر المطابقة النصية: " + acc + "% — لا يقيّم التجويد الصوتي";
   
   if (listening && words[pos]) words[pos].el.scrollIntoView({ block: "center", behavior: "smooth" });
 
