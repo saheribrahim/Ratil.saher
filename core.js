@@ -133,7 +133,8 @@ function load() {
         words[words.length - 1].el.textContent += t;
         return;
       }
-      // Keep Uthmani words joined, matching the requested mushaf text style.
+      // Insert a real space between words so they never appear joined.
+      if (line.childNodes.length) line.appendChild(document.createTextNode(" "));
       const s = document.createElement("span");
       s.className = "w todo";
       s.textContent = t;
