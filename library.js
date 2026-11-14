@@ -58,14 +58,13 @@ const MID = {"حفص عن عاصم": 1, "ورش": 4, "قالون": 7, "الدو�
 
 // Quranpedia text cache v3: deliberately bypasses older localStorage text without
 // the current Uthmani word separators.
-const QP_TEXT_CACHE_VERSION = "ratil_qp_20261114_v5";
+const QP_TEXT_CACHE_VERSION = "ratil_qp_20261114_v6";
 
 function normalizeQuranText(text) {
   return String(text || "")
     .normalize("NFC")
-    // Convert invisible/typographic word separators to ordinary spaces.
-    .replace(/[\u200B\u2060\uFEFF\u00A0\u202F]/g, " ")
-    .replace(/[\t\r\n]+/g, " ")
+    // Convert all Unicode whitespace and invisible word separators to ordinary spaces.
+    .replace(/[\u0009-\u000D\u0020\u0085\u00A0\u1680\u2000-\u200B\u2028\u2029\u202F\u205F\u2060\u3000\uFEFF]+/g, " ")
     .replace(/ {2,}/g, " ")
     .trim();
 }
