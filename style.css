@@ -48,10 +48,10 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 
 #text { direction: rtl; text-align: center; white-space: normal; font-family: "RatilQuranpedia", "Amiri Quran", "Traditional Arabic", serif; font-size: 32px; line-height: 2.4; }
 .v { display: block; margin-bottom: 6px; }
-.w { display: inline-block; padding: 0 .12em; margin-inline: .2em; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; }
-/* Preserve clear word gaps while keeping every ayah on its own line. */
-#text .v { word-spacing: .2em; }
-#text .w + .w { margin-inline-start: .2em; }
+.w { display: inline-block; padding: 0; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; }
+/* Match the supplied Uthmani spelling: words touch; only the ayah marker has a preceding space. */
+#text .v { word-spacing: 0; }
+#text .w + .w { margin-inline-start: 0; }
 
 .w.ok { color: var(--ok); }
 .w.near { color: var(--near); }
