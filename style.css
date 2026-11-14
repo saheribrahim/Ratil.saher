@@ -48,7 +48,10 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 
 #text { direction: rtl; text-align: center; font-family: "Amiri Quran", "Traditional Arabic", serif; font-size: 32px; line-height: 2.4; }
 .v { display: block; margin-bottom: 6px; }
-.w { display: inline-block; padding: 0 5px; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; }
+.w { display: inline-block; padding: 0 5px; margin-inline: .14em; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; }
+/* Keep a clear visual gap between every Quran word in every surah. */
+#text .v { word-spacing: .18em; }
+#text .w + .w { margin-inline-start: .2em; }
 
 .w.ok { color: var(--ok); }
 .w.near { color: var(--near); }
