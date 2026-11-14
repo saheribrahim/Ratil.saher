@@ -115,6 +115,13 @@ function load() {
   const box = $("text");
   if (!box) return;
   box.innerHTML = "";
+
+  const surahNumber = Number($("surah") && $("surah").value) || 1;
+  const surahName = (typeof NAMES !== "undefined" && NAMES[surahNumber - 1]) || "";
+  const title = document.createElement("div");
+  title.className = "surah-title";
+  title.textContent = "سُورَةُ " + surahName;
+  box.appendChild(title);
   
   verses.forEach((v, vi) => {
     const line = document.createElement("span");
@@ -126,8 +133,7 @@ function load() {
         words[words.length - 1].el.textContent += t;
         return;
       }
-      // Add an actual whitespace character between each Quran word.
-      if (line.childNodes.length) line.appendChild(document.createTextNode(" "));
+      // Keep Uthmani words joined, matching the requested mushaf text style.
       const s = document.createElement("span");
       s.className = "w todo";
       s.textContent = t;
