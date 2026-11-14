@@ -58,7 +58,7 @@ const MID = {"حفص عن عاصم": 1, "ورش": 4, "قالون": 7, "الدو�
 
 // Quranpedia text cache v3: deliberately bypasses older localStorage text without
 // the current Uthmani word separators.
-const QP_TEXT_CACHE_VERSION = "ratil_qp_20261114_v3";
+const QP_TEXT_CACHE_VERSION = "ratil_qp_20261114_v4";
 
 function normalizeQuranText(text) {
   return String(text || "")
