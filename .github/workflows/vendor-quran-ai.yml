@@ -39,7 +39,7 @@ jobs:
           tar -xzf huggingface-transformers-3.8.1.tgz
           test -s package/dist/transformers.min.js
           cp package/dist/transformers.min.js "$GITHUB_WORKSPACE/vendor/transformers/"
-          find package/dist -maxdepth 1 -type f \\( -name 'ort-wasm*.mjs' -o -name 'ort-wasm*.wasm' \\) -exec cp {} "$GITHUB_WORKSPACE/vendor/transformers/" \\;
+          find package/dist -maxdepth 1 -type f \( -name 'ort-wasm*.mjs' -o -name 'ort-wasm*.wasm' \) -exec cp {} "$GITHUB_WORKSPACE/vendor/transformers/" \;
           test -n "$(find "$GITHUB_WORKSPACE/vendor/transformers" -name 'ort-wasm*.wasm' -print -quit)"
           cp package/LICENSE "$GITHUB_WORKSPACE/vendor/transformers/LICENSE-transformers.txt"
           echo "Vendored runtime assets:"
