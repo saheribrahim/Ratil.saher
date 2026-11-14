@@ -1,0 +1,7 @@
+Model: Mustanad/whisper-base-ar-quran-onnx
+Revision: 4fe3d5d55ce491d3ecd6fb33ecf24df171af3659
+Format: ONNX, dynamic 8-bit quantization
+Purpose: Quran recitation speech-to-text; this model does not score tajweed, vowels, or makharij.
+Lineage and credits: OpenAI Whisper Base and Tarteel AI Quran fine-tune; ONNX conversion by Mustanad.
+License stated by upstream model card: Apache-2.0.
+Source: https://huggingface.co/Mustanad/whisper-base-ar-quran-onnx
