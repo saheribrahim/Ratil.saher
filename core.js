@@ -126,7 +126,7 @@ function load() {
   verses.forEach((v, vi) => {
     const line = document.createElement("div");
     line.className = "v";
-    v.replace(/[\u200B\u2060\uFEFF\u00A0\u202F]/g, " ").split(/\s+/).filter(Boolean).forEach(t => {
+    v.replace(/[\u0009-\u000D\u0020\u0085\u00A0\u1680\u2000-\u200B\u2028\u2029\u202F\u205F\u2060\u3000\uFEFF]+/g, " ").trim().split(/ +/).filter(Boolean).forEach(t => {
       const n = norm(t);
       if (!n && words.length && words[words.length - 1].el.parentNode === line) {
         words[words.length - 1].t += t;
