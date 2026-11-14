@@ -56,69 +56,124 @@ $("imp").onclick = () => $("file").click();
 
 const MID = {"حفص عن عاصم": 1, "ورش": 4, "قالون": 7, "الدوري": 6, "السوسي": 10, "شعبة": 9, "البزي": 5, "قنبل": 8};
 
+// Quranpedia text cache v3: deliberately bypasses older localStorage text without
+// the current Uthmani word separators.
+const QP_TEXT_CACHE_VERSION = "ratil_qp_20261114_v3";
+
+function normalizeQuranText(text) {
+  return String(text || "")
+    .normalize("NFC")
+    // Convert invisible/typographic word separators to ordinary spaces.
+    .replace(/[\u200B\u2060\uFEFF\u00A0\u202F]/g, " ")
+    .replace(/[\t\r\n]+/g, " ")
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
+
+function setQuranpediaFont(name, sourceFont) {
+  const mushafId = MID[name];
+  const needsUthmaniV3 = [1, 2, 4, 5, 6, 7, 9, 10].includes(Number(mushafId));
+  const fontUrl = needsUthmaniV3
+    ? "https://api.quranpedia.net/assets/fonts/arabic/UthmanicHafs-v-3.0.ttf"
+    : sourceFont;
+  if (!fontUrl || !/^https?:\/\//i.test(fontUrl)) return;
+
+  let style = document.getElementById("quranpedia-font-style");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "quranpedia-font-style";
+    document.head.appendChild(style);
+  }
+  style.textContent =
+    '@font-face{font-family:"RatilQuranpedia";src:url("' + fontUrl + '") format("truetype");font-display:swap}' +
+    '#text,#sW,.tj-report-word{font-family:"RatilQuranpedia","Amiri Quran","Traditional Arabic",serif!important}';
+}
+
+function hasCompleteSurahSet(data) {
+  return data && typeof data === "object" &&
+    Object.keys(data).length >= 114 &&
+    Array.from({length:114}, (_,i) => data[i + 1]).every(v => Array.isArray(v) && v.length);
+}
+
 async function getRiwaya(name, force) {
   $("live").textContent = "";
-  
-  if (!LIB[name] || Object.keys(LIB[name]).length < 114) {
-    try {
-      const saved = localStorage.getItem("ratil_lib_" + name);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Object.keys(parsed).length >= 114) {
-          LIB[name] = parsed;
-          fillR(name);
-          fillS();
-          load();
-          return;
-        }
-      }
-    } catch(e) {}
+  const mushafId = MID[name];
+  if (!mushafId) {
+    msg("الرواية المختارة غير مرتبطة حاليًا بمصدر Quranpedia.", true);
+    return;
   }
 
-  const have = LIB[name] && Object.keys(LIB[name]).length >= 114;
-  
-  if (MID[name] && (!have || force)) {
-    msg("جاري تحميل رواية " + name + " (114 سورة)… Downloading…");
+  const cacheKey = QP_TEXT_CACHE_VERSION + "_" + mushafId;
+  if (!force) {
     try {
-      const res = await fetch(`https://api.quranpedia.net/v1/mushafs/${MID[name]}`);
-      if (!res.ok) throw new Error("Network response was not ok");
-      const j = await res.json();
-      const o = {}, hm = {};
-      
-      j.surahs.forEach(s => {
-        const a = [], m = [];
-        s.ayahs.forEach(x => {
-          a[x.number - 1] = x.text;
-          m[x.number - 1] = x.number_in_hafs;
-        });
-        if(s.id !== 1 && s.id !== 9 && a[0]) {
-          const w = a[0].split(/\s+/);
-          if(norm(w.slice(0, 4).join(" ")) === "بسماللهالرحمنالرحيم") {
-            a[0] = w.slice(4).join(" ");
-          }
-        }
-        o[s.id] = a;
-        hm[s.id] = m;
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
+      if (cached && hasCompleteSurahSet(cached.surahs)) {
+        LIB[name] = cached.surahs;
+        setQuranpediaFont(name, cached.fontUrl || "");
+        fillR(name);
+        fillS();
+        load();
+        return;
+      }
+    } catch (_) {}
+  }
+
+  msg("جاري تحديث نص القرآن من Quranpedia...");
+  try {
+    const res = await fetch("https://api.quranpedia.net/v1/mushafs/" + mushafId, {
+      headers: {Accept: "application/json"},
+      cache: force ? "reload" : "no-cache"
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const j = await res.json();
+    if (!Array.isArray(j.surahs)) throw new Error("Invalid Quranpedia response");
+
+    const surahs = {}, hm = {};
+    j.surahs.forEach(s => {
+      const ayahs = [], numbers = [];
+      (s.ayahs || []).forEach(x => {
+        ayahs[x.number - 1] = normalizeQuranText(x.text);
+        numbers[x.number - 1] = x.number_in_hafs;
       });
 
-      if(Object.keys(o).length < 114) throw new Error("Incomplete data");
-      
-      LIB[name] = o;
-      HM[name] = hm;
-      
-      try {
-        localStorage.setItem("ratil_lib_" + name, JSON.stringify(o));
-      } catch(e) {}
+      // Remove only a duplicated basmala prefix where it is outside the numbered ayah.
+      if (s.id !== 1 && s.id !== 9 && ayahs[0]) {
+        const parts = ayahs[0].split(" ");
+        if (parts.length >= 4 &&
+            norm(parts.slice(0, 4).join(" ")) === "بسماللهالرحمنالرحيم") {
+          ayahs[0] = parts.slice(4).join(" ");
+        }
+      }
+      surahs[s.id] = ayahs;
+      hm[s.id] = numbers;
+    });
 
-      msg("✅ تم تحميل رواية " + name + " (114 سورة) بنجاح · Loaded.");
-    } catch(err) {
-      msg("⚠️ تعذّر التحميل المباشر. تأكد من اتصال الإنترنت أو استخدم Import.", true);
-    }
+    if (!hasCompleteSurahSet(surahs)) throw new Error("Incomplete Quranpedia mushaf");
+
+    LIB[name] = surahs;
+    HM[name] = hm;
+    setQuranpediaFont(name, j.font_file || "");
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        surahs,
+        fontUrl: j.font_file || "",
+        source: "Quranpedia",
+        version: QP_TEXT_CACHE_VERSION
+      }));
+      // Remove the old, potentially joined-word cache after a verified refresh.
+      localStorage.removeItem("ratil_lib_" + name);
+    } catch (_) {}
+
+    fillR(name);
+    fillS();
+    load();
+    msg("تم تحديث نص الرواية من Quranpedia مع فواصل الكلمات.");
+  } catch (err) {
+    console.error("Quranpedia text refresh failed:", err);
+    LIB[name] = {};
+    $("text").innerHTML = "";
+    msg("تعذّر تحديث النص من Quranpedia. لم أستخدم النسخة القديمة حتى لا تظهر الكلمات ملتصقة. تحقق من الإنترنت ثم أعد المحاولة.", true);
   }
-  
-  fillR(name);
-  fillS();
-  load();
 }
 
 $("net").onclick = () => getRiwaya($("riwaya").value, true);
