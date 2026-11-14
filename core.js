@@ -110,16 +110,35 @@ window.alignBest = alignBest;
 
 // تحميل الآيات
 function load() {
-  const verses = ((LIB[$("riwaya").value] || {})[$("surah").value] || []);
+  const riwayaId = $("riwaya") ? $("riwaya").value : "1";
+  const surahId = $("surah") ? $("surah").value : "1";
+  const verses = ((LIB[ "quranpedia:" + Number(riwayaId) ] || {})[surahId] || []);
   words = [];
   const box = $("text");
   if (!box) return;
   box.innerHTML = "";
-  
-  verses.forEach((v, vi) => {
+
+  if (!Array.isArray(verses) || !verses.length) {
+    st = [];
+    pos = 0;
+    render();
+    if (typeof window.loadQuranpediaSurah === "function") {
+      window.loadQuranpediaSurah(riwayaId, surahId, false)
+        .then(() => {
+          if ($("riwaya") && $("surah") &&
+              $("riwaya").value === String(riwayaId) &&
+              $("surah").value === String(surahId)) load();
+        })
+        .catch(() => {});
+    }
+    return;
+  }
+
+  verses.forEach((entry, vi) => {
+    const verseText = typeof entry === "string" ? entry : String(entry.text || "");
     const line = document.createElement("span");
     line.className = "v";
-    v.split(/\s+/).filter(Boolean).forEach(t => {
+    verseText.split(/\\s+/).filter(Boolean).forEach(t => {
       const n = norm(t);
       if (!n && words.length && words[words.length - 1].el.parentNode === line) {
         words[words.length - 1].t += t;
@@ -135,11 +154,14 @@ function load() {
     });
     const num = document.createElement("span");
     num.className = "num";
-    num.textContent = "۝" + ad(vi + 1);
+    const sourceMarker = typeof entry === "object" && entry ? entry.marker : "";
+    const sourceNumber = typeof entry === "object" && entry ? entry.number : vi + 1;
+    num.textContent = sourceMarker || ("۝" + ad(sourceNumber || vi + 1));
     line.appendChild(num);
+    line.appendChild(document.createTextNode(" "));
     box.appendChild(line);
   });
-  
+
   st = words.map(() => "todo");
   pos = 0;
   if (typeof paint === "function") paint();
