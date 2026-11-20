@@ -140,3 +140,38 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 
 
 @media(max-width:520px){#text{font-size:27px;line-height:2.25}.v{padding:9px 2px 12px}.surah-title{margin-bottom:10px}}
+
+/* Quran verse layout: one verse per line, clear word spacing */
+#text {
+  direction: rtl;
+  text-align: right;
+  white-space: normal;
+  word-spacing: .22em;
+}
+
+#text .v {
+  display: block;
+  width: 100%;
+  direction: rtl;
+  text-align: right;
+  white-space: normal;
+  margin: 0 0 14px;
+  padding: 0 4px 8px;
+  line-height: 2.3;
+}
+
+#text .v .w {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+  white-space: normal;
+  vertical-align: baseline;
+}
+
+#text .v .num {
+  display: inline;
+  white-space: nowrap;
+  color: var(--mute);
+  font-size: .72em;
+  padding: 0;
+}
