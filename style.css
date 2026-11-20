@@ -46,9 +46,9 @@ button.rec { background: var(--miss); border-color: var(--miss); color: #fff; }
 label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--mute); cursor: pointer; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; }
 
-#text { direction: rtl; text-align: center; white-space: normal; font-family: Tahoma, Arial, sans-serif !important; word-spacing: .18em; font-size: 32px; line-height: 2.4; }
-.surah-title { display: block; margin: 0 0 8px; font-size: .78em; line-height: 1.8; font-weight: 700; text-align: center; }
-.v { display: flex; flex-wrap: wrap; flex-direction: row; direction: rtl; justify-content: center; align-items: baseline; column-gap: .32em; row-gap: .08em; width: 100%; margin: 0 0 .55em; white-space: normal; }
+#text { direction: rtl; text-align: right; white-space: normal; font-family: Tahoma, Arial, sans-serif !important; word-spacing: .12em; font-size: 30px; line-height: 2.25; padding: 4px 2px; }
+.surah-title { display: block; margin: 0 0 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); font-size: .82em; line-height: 1.8; font-weight: 700; text-align: center; color: var(--ink); }
+.v { display: flex; flex-wrap: wrap; flex-direction: row; direction: rtl; justify-content: flex-start; align-items: baseline; column-gap: .28em; row-gap: .12em; width: 100%; margin: 0; padding: 10px 4px 13px; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); white-space: normal; text-align: right; }
 .w + .w { margin-inline-start: 0; }
 .w { display: inline-block; padding: 0; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: Tahoma, Arial, sans-serif !important; }
 
@@ -58,7 +58,7 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .w.cur { background: var(--cur); }
 .hide .w.todo:not(.cur) { filter: blur(7px); }
 
-.num { color: var(--mute); font-size: 22px; padding: 0 4px; }
+.num { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; color: var(--mute); font-size: .62em; line-height: 1; min-width: 2.15em; min-height: 2.15em; padding: .2em; border: 1px solid var(--line); border-radius: 50%; vertical-align: middle; }
 .stats { display: flex; gap: 10px; margin-top: 12px; }
 .stat { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; }
 .stat b { display: block; font-size: 22px; }
@@ -138,4 +138,4 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 @media(max-width:520px){.tj-report-row{grid-template-columns:1fr;gap:5px}.tj-report-word{font-size:24px}}
 
 
-@media(max-width:520px){#text{font-size:27px;line-height:2.35}.surah-title{margin-bottom:6px}}
+@media(max-width:520px){#text{font-size:27px;line-height:2.25}.v{padding:9px 2px 12px}.surah-title{margin-bottom:10px}}
