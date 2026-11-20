@@ -75,7 +75,7 @@ function setQuranpediaFont(name, sourceFont) {
   const fontUrl = needsUthmaniV3
     ? "https://api.quranpedia.net/assets/fonts/arabic/UthmanicHafs-v-3.0.ttf"
     : sourceFont;
-  if (!fontUrl || !/^https?:\\/\\//i.test(fontUrl)) return;
+  if (!fontUrl || !(fontUrl.startsWith("https://") || fontUrl.startsWith("http://"))) return;
 
   let style = document.getElementById("quranpedia-font-style");
   if (!style) {
