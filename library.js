@@ -94,7 +94,7 @@ function hasSeparatedQuranWords(data) {
 
   return minimumWords.every((minimum, index) => {
     const verse = String(fatiha[index] || "").trim();
-    const tokens = verse.split(/[\\p{White_Space}\\u200B\\u2060\\uFEFF]+/u).filter(Boolean);
+    const tokens = verse.split(/[\p{White_Space}\u200B\u2060\uFEFF]+/u).filter(Boolean);
     return tokens.length >= minimum;
   });
 }
