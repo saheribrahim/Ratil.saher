@@ -46,11 +46,11 @@ button.rec { background: var(--miss); border-color: var(--miss); color: #fff; }
 label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--mute); cursor: pointer; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; }
 
-#text { direction: rtl; text-align: right; white-space: normal; font-family: Tahoma, Arial, sans-serif !important; word-spacing: .12em; font-size: 30px; line-height: 2.25; padding: 4px 2px; }
+#text { direction: rtl; text-align: right; white-space: normal; font-family: "RatilQuranpedia", "Amiri Quran", "Traditional Arabic", serif !important; word-spacing: .12em; font-size: 30px; line-height: 2.25; padding: 4px 2px; font-feature-settings: "calt" 1; font-kerning: normal; }
 .surah-title { display: block; margin: 0 0 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); font-size: .82em; line-height: 1.8; font-weight: 700; text-align: center; color: var(--ink); }
 .v { display: flex; flex-wrap: wrap; flex-direction: row; direction: rtl; justify-content: flex-start; align-items: baseline; column-gap: .28em; row-gap: .12em; width: 100%; margin: 0; padding: 10px 4px 13px; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); white-space: normal; text-align: right; }
 .w + .w { margin-inline-start: 0; }
-.w { display: inline-block; padding: 0; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: Tahoma, Arial, sans-serif !important; }
+.w { display: inline-block; padding: 0; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: "RatilQuranpedia", "Amiri Quran", "Traditional Arabic", serif !important; font-feature-settings: "calt" 1; font-kerning: normal; }
 
 .w.ok { color: var(--ok); }
 .w.near { color: var(--near); }
