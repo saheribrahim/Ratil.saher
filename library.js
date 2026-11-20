@@ -69,11 +69,23 @@ function normalizeQuranText(text) {
     .trim();
 }
 
-function setQuranpediaFont() {
-  // Use the site's regular Arabic font instead of replacing it with the
-  // special Quranpedia/Uthmanic web font.
-  const style = document.getElementById("quranpedia-font-style");
-  if (style) style.remove();
+function setQuranpediaFont(name, sourceFont) {
+  const mushafId = MID[name];
+  const needsUthmaniV3 = [1, 2, 4, 5, 6, 7, 9, 10].includes(Number(mushafId));
+  const fontUrl = needsUthmaniV3
+    ? "https://api.quranpedia.net/assets/fonts/arabic/UthmanicHafs-v-3.0.ttf"
+    : sourceFont;
+  if (!fontUrl || !/^https?:\\/\\//i.test(fontUrl)) return;
+
+  let style = document.getElementById("quranpedia-font-style");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "quranpedia-font-style";
+    document.head.appendChild(style);
+  }
+  style.textContent =
+    '@font-face{font-family:"RatilQuranpedia";src:url("' + fontUrl + '") format("truetype");font-display:swap}' +
+    '#text,#sW,.tj-report-word{font-family:"RatilQuranpedia","Amiri Quran","Traditional Arabic",serif!important}';
 }
 
 function hasCompleteSurahSet(data) {
