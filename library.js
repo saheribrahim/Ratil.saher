@@ -57,13 +57,13 @@ $("imp").onclick = () => $("file").click();
 const MID = {"حفص عن عاصم": 1, "ورش": 4, "قالون": 7, "الدوري": 6, "السوسي": 10, "شعبة": 9, "البزي": 5, "قنبل": 8};
 
 // Versioned Quranpedia cache: reject stale text that does not preserve word separators.
-const QP_TEXT_CACHE_VERSION = "ratil_qp_20261120_v8_separated_words";
+const QP_TEXT_CACHE_VERSION = "ratil_qp_20261120_v9_explicit_word_gaps";
 
 function normalizeQuranText(text) {
   return String(text || "")
     .normalize("NFC")
     // Convert all Unicode whitespace and invisible word separators to ordinary spaces.
-    .replace(/[\p{White_Space}\u200B\u2060\uFEFF]+/gu, " ")
+    .replace(/[\p{White_Space}\u200B\u200C\u2060\uFEFF]+/gu, " ")
     .replace(/ {2,}/g, " ")
     .trim();
 }
