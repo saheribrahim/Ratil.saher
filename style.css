@@ -48,10 +48,10 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 
 #text { direction: rtl; text-align: right; white-space: normal; font-family: "RatilQuranpedia", "Amiri Quran", "Traditional Arabic", serif !important; word-spacing: .12em; font-size: 30px; line-height: 2.25; padding: 4px 2px; font-feature-settings: "calt" 1; font-kerning: normal; }
 .surah-title { display: block; margin: 0 0 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); font-size: .82em; line-height: 1.8; font-weight: 700; text-align: center; color: var(--ink); }
-.v { display: flex; flex-wrap: wrap; flex-direction: row; direction: rtl; justify-content: flex-start; align-items: baseline; column-gap: .28em; row-gap: .12em; width: 100%; margin: 0; padding: 10px 4px 13px; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); white-space: normal; text-align: right; }
+.v { display: flex; flex-wrap: wrap; flex-direction: row; direction: rtl; justify-content: flex-start; align-items: baseline; column-gap: .28em; row-gap: .12em; width: 100%; margin: 0 0 12px; padding: 0 4px 8px; border: 0; white-space: normal; text-align: right; }
 .w + .w { margin-inline-start: 0; }
 .w { display: inline-block; padding: 0; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: "RatilQuranpedia", "Amiri Quran", "Traditional Arabic", serif !important; font-feature-settings: "calt" 1; font-kerning: normal; }
-#text .w { font-weight: 700; }
+#text .w { font-weight: 400; }
 
 .w.ok { color: var(--ok); }
 .w.near { color: var(--near); }
@@ -59,7 +59,7 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .w.cur { background: var(--cur); }
 .hide .w.todo:not(.cur) { filter: blur(7px); }
 
-.num { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; color: var(--mute); font-size: .62em; line-height: 1; min-width: 2.15em; min-height: 2.15em; padding: .2em; border: 1px solid var(--line); border-radius: 50%; vertical-align: middle; }
+.num { display: inline; flex: 0 0 auto; color: var(--mute); font-size: .72em; line-height: inherit; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; vertical-align: baseline; }
 .stats { display: flex; gap: 10px; margin-top: 12px; }
 .stat { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; }
 .stat b { display: block; font-size: 22px; }
