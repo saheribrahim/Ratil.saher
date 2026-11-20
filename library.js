@@ -56,9 +56,8 @@ $("imp").onclick = () => $("file").click();
 
 const MID = {"حفص عن عاصم": 1, "ورش": 4, "قالون": 7, "الدوري": 6, "السوسي": 10, "شعبة": 9, "البزي": 5, "قنبل": 8};
 
-// Quranpedia text cache v3: deliberately bypasses older localStorage text without
-// the current Uthmani word separators.
-const QP_TEXT_CACHE_VERSION = "ratil_qp_20261114_v7";
+// Versioned Quranpedia cache: reject stale text that does not preserve word separators.
+const QP_TEXT_CACHE_VERSION = "ratil_qp_20261120_v8_separated_words";
 
 function normalizeQuranText(text) {
   return String(text || "")
@@ -88,10 +87,23 @@ function setQuranpediaFont(name, sourceFont) {
     '#text,#sW,.tj-report-word{font-family:"RatilQuranpedia","Amiri Quran","Traditional Arabic",serif!important}';
 }
 
+function hasSeparatedQuranWords(data) {
+  const fatiha = data && data[1];
+  const minimumWords = [4, 4, 2, 3, 4];
+  if (!Array.isArray(fatiha) || fatiha.length < minimumWords.length) return false;
+
+  return minimumWords.every((minimum, index) => {
+    const verse = String(fatiha[index] || "").trim();
+    const tokens = verse.split(/[\\p{White_Space}\\u200B\\u2060\\uFEFF]+/u).filter(Boolean);
+    return tokens.length >= minimum;
+  });
+}
+
 function hasCompleteSurahSet(data) {
   return data && typeof data === "object" &&
     Object.keys(data).length >= 114 &&
-    Array.from({length:114}, (_,i) => data[i + 1]).every(v => Array.isArray(v) && v.length);
+    Array.from({length:114}, (_,i) => data[i + 1]).every(v => Array.isArray(v) && v.length) &&
+    hasSeparatedQuranWords(data);
 }
 
 async function getRiwaya(name, force) {
@@ -147,7 +159,7 @@ async function getRiwaya(name, force) {
       hm[s.id] = numbers;
     });
 
-    if (!hasCompleteSurahSet(surahs)) throw new Error("Incomplete Quranpedia mushaf");
+    if (!hasCompleteSurahSet(surahs)) throw new Error("Incomplete Quranpedia mushaf or missing word separators in Al-Fatiha");
 
     LIB[name] = surahs;
     HM[name] = hm;
