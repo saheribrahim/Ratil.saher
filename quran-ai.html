@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123f32">
+<title>التسميع الذكي | رتّل</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;--green:#155b43;--green2:#207653;--bg:#f3f7f4;--ink:#203027;--muted:#718078;--line:#dce7df;--red:#b93d35;--gold:#98670e}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#e7f1e9,#f5f7f5 300px);font-family:Cairo,Tahoma,Arial,sans-serif;color:var(--ink)}
+main{width:min(940px,calc(100% - 24px));margin:28px auto 50px}
+header{text-align:center;padding:18px 8px 25px}.logo{width:58px;height:58px;margin:auto;display:grid;place-items:center;border-radius:19px;background:var(--green);color:#fff;font-size:31px}
+h1{margin:10px 0 2px;color:var(--green);font-size:clamp(25px,5vw,38px)}.lead{margin:0;color:var(--muted);font-size:14px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:clamp(16px,3vw,24px);margin:14px 0;box-shadow:0 7px 25px #173c2410}
+h2{font-size:18px;margin:0 0 14px;display:flex;align-items:center;gap:9px}.step{font-size:12px;color:var(--green);background:#e8f3eb;border-radius:8px;padding:3px 9px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+label{display:block;color:#56655c;font-size:13px;margin-bottom:6px}
+select,input[type=number],input[type=file]{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:#fbfdfb;color:var(--ink);font:14px Cairo,Tahoma}
+button,.linkbtn{border:0;border-radius:10px;padding:11px 16px;background:var(--green);color:#fff;font:700 14px Cairo,Tahoma;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+button.secondary{background:#e9f2eb;color:var(--green)}button.stop{background:var(--red)}button:disabled{opacity:.48;cursor:not-allowed}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
+.notice,.status{border-radius:11px;padding:11px 13px;font-size:13px;line-height:1.9;margin-top:12px;background:#edf5ef;color:var(--green)}
+.status.warn{background:#fff5dc;color:#755512}.status.error{background:#fff0ee;color:#9d3028}
+.progress{height:9px;background:#e8eee9;border-radius:20px;overflow:hidden;margin-top:10px}.progress>i{display:block;height:100%;width:0;background:var(--green2);transition:width .2s}
+.mushaf{font-family:"Amiri Quran","Traditional Arabic",serif;font-size:clamp(22px,3vw,29px);line-height:2.2;text-align:justify;background:#fcfdfb;border:1px solid var(--line);border-radius:12px;padding:16px;max-height:360px;overflow:auto}
+.ayah{margin:0 0 10px}.ayah-label{font:12px Cairo;color:var(--green);background:#e9f3eb;border-radius:30px;padding:2px 9px;margin-inline-start:7px;white-space:nowrap}
+.word{padding:0 3px;border-radius:6px}.word.current{background:#d8f0df;color:#075d38;outline:1px solid #73b58c}
+#position{font-weight:700;color:var(--green);font-size:14px}
+ul{margin:0;padding-right:22px}li{margin:7px 0;line-height:1.8}
+.small{font-size:12px;color:var(--muted);line-height:1.9}.caps{font-size:12px;color:var(--muted);margin-top:10px}
+.hidden{display:none!important}audio{width:100%;margin-top:10px}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:22px}
+@media(max-width:650px){.grid,.grid.two{grid-template-columns:1fr}.actions button{flex:1}}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "onnxruntime-web/all": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.all.min.mjs"
+  }
+}
+</script>
+</head>
+<body>
+<main>
+<header>
+  <div class="logo">ق</div>
+  <h1>التسميع الذكي · رتّل</h1>
+  <p class="lead">محرك قرآني لمتابعة الآيات والكلمات واكتشاف أخطاء الحفظ</p>
+</header>
+
+<section class="panel">
+  <h2><span class="step">01</span> اختر موضع التسميع</h2>
+  <div class="grid">
+    <div><label for="surah">السورة</label><select id="surah"><option value="1">الفاتحة</option></select></div>
+    <div><label for="fromAyah">من الآية</label><input id="fromAyah" type="number" min="1" value="1"></div>
+    <div><label for="toAyah">إلى الآية</label><input id="toAyah" type="number" min="1" value="7"></div>
+  </div>
+  <div class="actions">
+    <button id="loadText" class="secondary">عرض الآيات المختارة</button>
+    <button id="freeStart" class="secondary">ابدأ من أي موضع</button>
+  </div>
+  <div id="quranStatus" class="status">جارٍ تحميل قائمة السور والنص القرآني...</div>
+  <h2 style="margin-top:20px">الآيات المرجعية</h2>
+  <div id="mushaf" class="mushaf">اختر السورة لعرض الآيات.</div>
+</section>
+
+<section class="panel">
+  <h2><span class="step">02</span> محرك التعرف القرآني</h2>
+  <div class="grid two">
+    <div>
+      <label for="tier">حجم النموذج</label>
+      <select id="tier"><option value="full" selected>Full — أعلى دقة متاحة</option><option value="lite">Lite — أخف للأجهزة المحدودة</option></select>
+    </div>
+    <div>
+      <label for="audioFile">ملف صوتي (MP3 / WAV / M4A وغيرها)</label>
+      <input id="audioFile" type="file" accept="audio/*">
+    </div>
+  </div>
+  <audio id="player" controls class="hidden"></audio>
+  <div class="actions">
+    <button id="micStart">🎙️ ابدأ التسميع المحدد</button>
+    <button id="stop" class="stop" disabled>إيقاف التسجيل</button>
+    <button id="fileStart" class="secondary">تحليل الملف المختار</button>
+  </div>
+  <div id="status" class="status">لم يتم تشغيل المحرك بعد. اضغط بدء التسميع لتحميل النموذج.</div>
+  <div class="progress"><i id="bar"></i></div>
+  <div class="small" id="modelInfo">يتم تنزيل النموذج والمرجع القرآني عند أول تشغيل، ثم يتم تخزينهما مؤقتًا على جهازك.</div>
+</section>
+
+<section class="panel">
+  <h2><span class="step">03</span> متابعة التلاوة</h2>
+  <div id="position">لم يتم تحديد موضع القراءة بعد.</div>
+  <div id="currentAyah" class="mushaf" style="margin-top:12px">سيظهر موضعك في المصحف هنا عند التعرف عليه.</div>
+  <div id="liveNote" class="notice">ستظهر هنا حالة المحرك أثناء القراءة.</div>
+</section>
+
+<section class="panel">
+  <h2><span class="step">04</span> الأخطاء التي تستحق المراجعة</h2>
+  <ul id="mistakes"><li>لم يتم رصد أخطاء بعد.</li></ul>
+  <div id="summary" class="status hidden"></div>
+  <p class="small">يعرض المحرك التنبيهات المؤكدة لديه فقط. وقد يفوّت بعض الأخطاء أو يصدر تنبيهًا غير صحيح؛ استمع إلى الكلمة وراجعها مع معلم متقن.</p>
+</section>
+
+<section class="panel">
+  <h2><span class="step">05</span> حدود التصحيح</h2>
+  <div class="notice">
+    هذا الإصدار يفحص أخطاء الحفظ: الكلمة المختلفة، والكلمة الساقطة، والكلمة الزائدة، وتجاوز مقطع من الآيات. لا يفحص حاليًا صحة المد أو الغنة أو المخارج أو الشدة، ولذلك لا يصح اعتباره مصحح تجويد ولا ضمانًا لدقة 100%.
+  </div>
+  <p class="small">المحرك يدعم رواية حفص عن عاصم فقط. الكود البرمجي لـ Tilawa مرخص MIT، وأوزان النموذج CC BY 4.0؛ راجع نسب العمل إلى Tilawa ومصادره في المستودع الأصلي قبل إعادة التوزيع أو الاستخدام التجاري.</p>
+</section>
+<footer>
+  Ratil · رتّل — يستخدم @tilawa/core 1.0.0-rc.0 و ONNX Runtime Web 1.30.0
+  <br><a href="./index.html">العودة إلى رتّل</a> · <a href="https://github.com/yazinsai/tilawa" target="_blank" rel="noopener">المصدر والتوثيق</a>
+</footer>
+</main>
+
+<script type="module">
+import { createTilawa, prepareMicrophone } from "https://cdn.jsdelivr.net/npm/@tilawa/core@1.0.0-rc.0/dist/web.js";
+
+const $ = id => document.getElementById(id);
+const QURAN_API = "https://api.alquran.cloud/v1";
+const ASSET_BASE = "https://tilawa.dev/v1/";
+const surahCache = new Map();
+let tilawa = null;
+let activeSession = null;
+let activeMic = null;
+let activePassage = null;
+let currentShownKey = "";
+let latestPosition = null;
+let loading = false;
+
+const ERROR_LABELS = {
+  wrong_word: "كلمة مختلفة عن النص المرجعي",
+  omitted_word: "كلمة يُحتمل أنها سقطت",
+  added_word: "كلمة زائدة محتملة",
+  skipped_passage: "يُحتمل تجاوز مقطع من الآيات"
+};
+
+function status(message, type="") {
+  $("status").textContent = message;
+  $("status").className = "status" + (type ? " " + type : "");
+}
+function quranStatus(message, type="") {
+  $("quranStatus").textContent = message;
+  $("quranStatus").className = "status" + (type ? " " + type : "");
+}
+function setBusy(value) {
+  loading = value;
+  $("micStart").disabled = value || !!activeSession;
+  $("freeStart").disabled = value || !!activeSession;
+  $("fileStart").disabled = value || !!activeSession;
+  $("stop").disabled = !activeSession;
+}
+function setProgress(fraction) {
+  $("bar").style.width = Math.max(0, Math.min(100, fraction * 100)) + "%";
+}
+
+async function getJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("HTTP " + response.status);
+  const body = await response.json();
+  if (body.code !== 200) throw new Error(body.status || "تعذر تحميل بيانات المصحف");
+  return body.data;
+}
+async function loadSurahList() {
+  try {
+    const list = await getJson(QURAN_API + "/surah");
+    $("surah").replaceChildren();
+    list.forEach(s => {
+      const option = document.createElement("option");
+      option.value = s.number;
+      option.textContent = s.number + ". " + s.name;
+      $("surah").appendChild(option);
+    });
+    $("surah").value = "1";
+    await refreshSelectedPassage();
+    quranStatus("تم تحميل قائمة السور ونص السورة بنجاح.");
+  } catch (error) {
+    quranStatus("تعذر تحميل المصحف: " + error.message + ". تحقق من الإنترنت.", "error");
+  }
+}
+async function loadSurah(id) {
+  if (surahCache.has(id)) return surahCache.get(id);
+  const data = await getJson(QURAN_API + "/surah/" + id + "/quran-uthmani");
+  surahCache.set(id, data);
+  return data;
+}
+function renderAyah(ayah, highlightWord=0) {
+  const box = document.createElement("div");
+  box.className = "ayah";
+  const words = String(ayah.text || "").trim().split(/\s+/).filter(Boolean);
+  words.forEach((word, index) => {
+    const span = document.createElement("span");
+    span.className = "word" + (index + 1 === highlightWord ? " current" : "");
+    span.textContent = word;
+    box.append(span, document.createTextNode(" "));
+  });
+  const label = document.createElement("span");
+  label.className = "ayah-label";
+  label.textContent = "﴿" + ayah.numberInSurah + "﴾";
+  box.append(label);
+  return box;
+}
+async function refreshSelectedPassage() {
+  const id = Number($("surah").value || 1);
+  try {
+    const data = await loadSurah(id);
+    $("fromAyah").max = data.ayahs.length;
+    $("toAyah").max = data.ayahs.length;
+    let from = Math.max(1, Math.min(data.ayahs.length, Number($("fromAyah").value || 1)));
+    let to = Math.max(from, Math.min(data.ayahs.length, Number($("toAyah").value || from)));
+    $("fromAyah").value = from;
+    $("toAyah").value = to;
+    const list = data.ayahs.filter(a => a.numberInSurah >= from && a.numberInSurah <= to);
+    $("mushaf").replaceChildren(...list.map(a => renderAyah(a)));
+    quranStatus(data.name + " — من الآية " + from + " إلى " + to + ".");
+  } catch (error) {
+    quranStatus("تعذر عرض الآيات: " + error.message, "error");
+  }
+}
+$("surah").addEventListener("change", refreshSelectedPassage);
+$("loadText").addEventListener("click", refreshSelectedPassage);
+$("fromAyah").addEventListener("change", refreshSelectedPassage);
+$("toAyah").addEventListener("change", refreshSelectedPassage);
+
+async function ensureEngine() {
+  if (tilawa) return tilawa;
+  status("تحميل محرك التعرف القرآني والمرجع...");
+  setProgress(0);
+  tilawa = await createTilawa({
+    assetBase: ASSET_BASE,
+    tier: $("tier").value,
+    onProgress: p => {
+      const pct = Math.floor(p.fraction * 100);
+      status((p.stage === "model" ? "تحميل النموذج " : p.stage === "reference" ? "تحميل مرجع المصحف " : "تهيئة المحرك ") + pct + "%");
+      if (p.stage === "model") setProgress(p.fraction * 0.75);
+      else if (p.stage === "reference") setProgress(0.75 + p.fraction * 0.20);
+      else setProgress(0.95 + p.fraction * 0.05);
+    }
+  });
+  const m = tilawa.model;
+  $("modelInfo").textContent = "النموذج: " + m.id + "@" + m.version + " · " + m.tier + " · " + m.backend + " — يعمل على جهازك.";
+  status("تم تحميل المحرك بنجاح. التسجيلات لا تُرفع إلى خادم التعرف.");
+  setProgress(1);
+  return tilawa;
+}
+
+function clearResults() {
+  $("mistakes").replaceChildren();
+  const li = document.createElement("li");
+  li.textContent = "لم يتم رصد أخطاء بعد.";
+  $("mistakes").append(li);
+  $("summary").classList.add("hidden");
+}
+function renderLocationText(ref) {
+  return "السورة " + ref.surah + "، الآية " + ref.ayah + "، الكلمة " + ref.word;
+}
+async function showPosition(ref) {
+  if (!ref || !ref.surah || !ref.ayah) return;
+  latestPosition = ref;
+  $("position").textContent = "موضع القراءة: " + renderLocationText(ref);
+  const key = ref.surah + ":" + ref.ayah;
+  if (key !== currentShownKey) {
+    currentShownKey = key;
+    try {
+      const data = await loadSurah(ref.surah);
+      const ayah = data.ayahs.find(a => a.numberInSurah === ref.ayah);
+      if (ayah) $("currentAyah").replaceChildren(renderAyah(ayah, ref.word));
+    } catch (error) {
+      $("currentAyah").textContent = "تم تحديد الموضع، لكن تعذر تحميل نص الآية للعرض.";
+    }
+  } else {
+    const spans = $("currentAyah").querySelectorAll(".word");
+    spans.forEach((span, index) => span.classList.toggle("current", index + 1 === ref.word));
+  }
+}
+async function wordAt(ref) {
+  try {
+    const data = await loadSurah(ref.surah);
+    const ayah = data.ayahs.find(a => a.numberInSurah === ref.ayah);
+    if (!ayah) return "";
+    return String(ayah.text || "").trim().split(/\s+/)[ref.word - 1] || "";
+  } catch (_) {
+    return "";
+  }
+}
+function addMistakeEvent(event) {
+  const label = ERROR_LABELS[event.errorClass] || "تنبيه يحتاج إلى مراجعة";
+  const ref = event.location || latestPosition;
+  const item = document.createElement("li");
+  const confidence = Number.isFinite(event.confidence) ? " — ثقة المحرك " + Math.round(event.confidence * 100) + "%" : "";
+  item.textContent = label + (ref ? " — " + renderLocationText(ref) : "") + confidence + ". أعد الاستماع وراجعها مع المصحف.";
+  $("mistakes").append(item);
+  $("liveNote").textContent = "تم تسجيل تنبيه للمراجعة، وليس حكمًا قطعيًا على صحة القراءة.";
+}
+function handleEngineEvent(event) {
+  if (event.type === "capabilities") {
+    $("liveNote").textContent = "فئات الأخطاء التي يدعمها النموذج: " + (event.supported || []).join("، ") + ".";
+    if ((event.unsupported || []).length) {
+      $("liveNote").textContent += " لا يدعم: " + event.unsupported.join("، ") + ".";
+    }
+    return;
+  }
+  if (event.type === "position") {
+    if (event.state === "locked" && event.observed && event.observed[0]) {
+      void showPosition(event.observed[0].word);
+      $("liveNote").textContent = "تم تحديد موضع القراءة بثقة " + Math.round(event.observed[0].confidence * 100) + "%.";
+    } else if (event.state === "ambiguous") {
+      $("liveNote").textContent = "هناك أكثر من موضع محتمل؛ تابع التلاوة حتى يتضح الموضع.";
+    } else if (event.state === "lost") {
+      $("liveNote").textContent = "فقد المحرك موضع القراءة مؤقتًا؛ تابع بوضوح.";
+    } else if (event.state === "acquiring") {
+      $("liveNote").textContent = "المحرك يبحث عن موضع القراءة...";
+    }
+    return;
+  }
+  if (event.type === "checker") {
+    if (event.state === "confirmed") addMistakeEvent(event);
+    else if (event.state === "resolved") {
+      $("liveNote").textContent = "لاحظ المحرك أنك صححت موضعًا بنفسك أثناء القراءة.";
+    } else if (event.state === "uncertain") {
+      $("liveNote").textContent = "الصوت غير واضح بما يكفي للحكم على موضع ما؛ لم يتم اعتماد خطأ.";
+    }
+  }
+}
+
+async function beginSession({mode, passage, prepared}) {
+  setBusy(true);
+  clearResults();
+  currentShownKey = "";
+  latestPosition = null;
+  activePassage = passage || null;
+  let session = null;
+  try {
+    const engine = await ensureEngine();
+    session = mode === "memorization"
+      ? engine.startMemorization(passage, {confirm:{after:"next-word"}})
+      : engine.startFreeRecitation();
+    activeSession = session;
+    session.subscribe(handleEngineEvent);
+    if (mode === "memorization") {
+      $("liveNote").textContent = "وضع التسميع المحدد: سيقارن المحرك القراءة بالنطاق الذي اخترته.";
+    }
+    activeMic = await engine.listen(session, {
+      prepared,
+      onLevel: db => {
+        const percent = Math.max(0, Math.min(100, (db + 60) / 50 * 100));
+        $("bar").style.width = percent + "%";
+      }
+    });
+    $("stop").disabled = false;
+    $("micStart").disabled = true;
+    $("freeStart").disabled = true;
+    $("fileStart").disabled = true;
+    status("الميكروفون يعمل. ابدأ التلاوة.");
+  } catch (error) {
+    prepared?.release();
+    session?.dispose();
+    activeSession = null;
+    activeMic = null;
+    setBusy(false);
+    status("تعذر بدء المحرك أو الميكروفون: " + (error?.message || error), "error");
+  }
+}
+$("micStart").addEventListener("click", () => {
+  if (loading || activeSession) return;
+  let prepared;
+  try {
+    prepared = prepareMicrophone(); // يجب استدعاؤها مباشرة من ضغطة المستخدم، قبل أي await
+  } catch (error) {
+    status("تعذر تجهيز الميكروفون. استخدم HTTPS واسمح للمتصفح بالوصول إليه: " + error.message, "error");
+    return;
+  }
+  const passage = {
+    surah: Number($("surah").value),
+    fromAyah: Number($("fromAyah").value),
+    toAyah: Number($("toAyah").value)
+  };
+  if (!passage.surah || passage.fromAyah < 1 || passage.toAyah < passage.fromAyah) {
+    prepared.release();
+    status("تحقق من أرقام السورة والآيات.", "error");
+    return;
+  }
+  void beginSession({mode:"memorization", passage, prepared});
+});
+$("freeStart").addEventListener("click", () => {
+  if (loading || activeSession) return;
+  let prepared;
+  try { prepared = prepareMicrophone(); }
+  catch (error) { status("تعذر تجهيز الميكروفون: " + error.message, "error"); return; }
+  void beginSession({mode:"free", prepared});
+});
+
+async function finishSession() {
+  if (!activeSession) return;
+  const session = activeSession;
+  $("stop").disabled = true;
+  status("إنهاء الجلسة واعتماد التنبيهات النهائية...");
+  try {
+    if (activeMic) await activeMic.stop();
+    else await session.end();
+    const mistakes = session.mistakes();
+    $("summary").textContent = "انتهت الجلسة. عدد التنبيهات المؤكدة للمراجعة: " + mistakes.length + ".";
+    $("summary").classList.remove("hidden");
+    if (!mistakes.length && $("mistakes").children.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "لم يصدر المحرك تنبيهًا مؤكدًا في هذه الجلسة. هذا لا يثبت خلو التلاوة من الخطأ.";
+      $("mistakes").append(li);
+    }
+    status("انتهت جلسة التسميع.");
+  } catch (error) {
+    status("حدث خطأ عند إنهاء الجلسة: " + error.message, "error");
+  } finally {
+    session.dispose();
+    activeSession = null;
+    activeMic = null;
+    setBusy(false);
+    $("stop").disabled = true;
+  }
+}
+$("stop").addEventListener("click", finishSession);
+
+$("fileStart").addEventListener("click", async () => {
+  if (loading || activeSession) return;
+  const file = $("audioFile").files[0];
+  if (!file) { status("اختر ملفًا صوتيًا أولًا.", "warn"); return; }
+  if (file.size > 35 * 1024 * 1024) { status("الحد الأقصى لحجم الملف 35 ميجابايت.", "error"); return; }
+  setBusy(true);
+  clearResults();
+  currentShownKey = "";
+  latestPosition = null;
+  let session = null;
+  let context = null;
+  try {
+    const engine = await ensureEngine();
+    status("قراءة الملف الصوتي...");
+    context = new AudioContext();
+    const buffer = await context.decodeAudioData(await file.arrayBuffer());
+    if (buffer.duration > 300) throw new Error("الحد الأقصى لمدة الملف خمس دقائق.");
+    const mono = new Float32Array(buffer.length);
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const samples = buffer.getChannelData(channel);
+      for (let i=0;i<samples.length;i++) mono[i] += samples[i] / buffer.numberOfChannels;
+    }
+    session = engine.startMemorization({
+      surah:Number($("surah").value),
+      fromAyah:Number($("fromAyah").value),
+      toAyah:Number($("toAyah").value)
+    }, {confirm:{after:"next-word"}});
+    activeSession = session;
+    session.subscribe(handleEngineEvent);
+    const chunk = Math.max(1, Math.floor(buffer.sampleRate * 0.30));
+    for (let i=0;i<mono.length;i+=chunk) {
+      await session.pushAudio(mono.subarray(i,Math.min(i+chunk,mono.length)), buffer.sampleRate);
+      const fraction = Math.min(1,(i+chunk)/mono.length);
+      setProgress(fraction);
+      status("تحليل الملف الصوتي: " + Math.floor(fraction*100) + "%");
+    }
+    await session.end();
+    const mistakes = session.mistakes();
+    $("summary").textContent = "اكتمل تحليل الملف. عدد التنبيهات المؤكدة للمراجعة: " + mistakes.length + ".";
+    $("summary").classList.remove("hidden");
+    if (!mistakes.length && $("mistakes").children.length === 0) {
+      const li=document.createElement("li");
+      li.textContent="لم يصدر المحرك تنبيهًا مؤكدًا. لا يعني ذلك ضمان خلو التلاوة من الخطأ.";
+      $("mistakes").append(li);
+    }
+    status("انتهى تحليل الملف.");
+  } catch (error) {
+    status("تعذر تحليل الملف: " + (error?.message || error), "error");
+  } finally {
+    if (context) await context.close().catch(()=>{});
+    session?.dispose();
+    activeSession = null;
+    activeMic = null;
+    setBusy(false);
+  }
+});
+
+$("audioFile").addEventListener("change", () => {
+  const file=$("audioFile").files[0];
+  const player=$("player");
+  if (!file) { player.classList.add("hidden"); return; }
+  player.src=URL.createObjectURL(file);
+  player.classList.remove("hidden");
+});
+
+window.addEventListener("pagehide", () => {
+  try { activeMic?.stop(); } catch (_) {}
+  try { activeSession?.dispose(); } catch (_) {}
+  try { tilawa?.dispose(); } catch (_) {}
+});
+
+loadSurahList();
+</script>
+</body>
+</html>
