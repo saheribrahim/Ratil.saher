@@ -45,10 +45,11 @@ select, button { font: inherit; font-size: 15px; padding: 10px 14px; border-radi
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 button.rec { background: var(--miss); border-color: var(--miss); color: #fff; }
 
-label.tg { display: flex; gap: 6px; align-items: center; font-size#text { direction: rtl; text-align: center; white-space: normal; font-family: var(--qfont); font-size: var(--qsize); line-height: 2.5; padding: 4px 2px; font-feature-settings: "liga", "calt", "kern"; text-rendering: optimizeLegibility; word-spacing: .04em; }
+label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--mute); cursor: pointer; }
+#text { direction: rtl; text-align: center; white-space: normal; font-family: var(--qfont); font-size: var(--qsize); line-height: 2.5; padding: 4px 2px; font-feature-settings: "liga", "calt", "kern"; text-rendering: optimizeLegibility; word-spacing: .04em; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; }
 
-#text { direction: rtl; text-align: right; white-space: normal; font-family: "RatilQuranpedia", "Amiri Quran", "Traditional Arabic", serif !important; word-spacing: .22em; font-size: 30px; line-height: 2.25; padding: 4px 2px; font-feature-settings: "calt" 1; font-kerning: normal; }
+
 .surah-title { display: block; margin: 0 0 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); font-size: .82em; line-height: 1.8; font-weight: 700; text-align: center; color: var(--ink); }
 .v { display: block; width: 100%; direction: rtl; margin: 0 0 6px; padding: 0 4px 6px; border: 0; white-space: normal; text-align: center; line-height: 2.5; }
 .w { display: inline-block; padding: 0 5px; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: var(--qfont); font-feature-settings: "liga", "calt", "kern"; font-kerning: normal; }
