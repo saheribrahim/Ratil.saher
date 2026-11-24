@@ -82,9 +82,10 @@ function setQuranpediaFont(name, sourceFont) {
     style.id = "quranpedia-font-style";
     document.head.appendChild(style);
   }
+  // Register the downloadable Quranpedia font as a fallback only.
+  // The visible Mushaf typography is controlled by --qfont in style.css.
   style.textContent =
-    '@font-face{font-family:"RatilQuranpedia";src:url("' + fontUrl + '") format("truetype");font-display:swap}' +
-    '#text,#sW,.tj-report-word{font-family:"RatilQuranpedia","Amiri Quran","Traditional Arabic",serif!important}';
+    '@font-face{font-family:"RatilQuranpedia";src:url("' + fontUrl + '") format("truetype");font-display:swap}';
 }
 
 function hasSeparatedQuranWords(data) {
