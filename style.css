@@ -81,7 +81,7 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 
 #sheet { position: fixed; inset: auto 0 0 0; z-index: 40; display: none; padding: 12px; }
 .sc { max-width: 720px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; text-align: center; box-shadow: 0 -8px 30px rgba(0,0,0,.25); }
-#sW { font-family: var(--qfont); font-size: calc(var(--qsize) * 1.35); direction: rtl; line-height: 1.8; }
+#sW { font-family: var(--qfont); font-size: 46px; direction: rtl; line-height: 1.8; }
 #sI { font-size: 14px; color: var(--mute); margin: 4px 0 12px; }
 .sb { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
