@@ -51,8 +51,8 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 
 
 .surah-title { display: block; margin: 0 0 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); font-size: .82em; line-height: 1.8; font-weight: 700; text-align: center; color: var(--ink); }
-.v { display: block; width: 100%; direction: rtl; margin: 0 0 6px; padding: 0 4px 6px; border: 0; white-space: normal; text-align: center; line-height: 2.5; }
-.w { display: inline-block; padding: 0 .06em; margin: 0 .1em; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: var(--qfont); font-feature-settings: "liga", "calt", "kern"; font-kerning: normal; }
+.v { display: flex; flex-wrap: wrap; width: 100%; direction: rtl; justify-content: center; align-items: baseline; column-gap: .34em; row-gap: .06em; margin: 0 0 6px; padding: 0 4px 6px; border: 0; white-space: normal; text-align: center; line-height: 2.5; }
+.w { display: inline-block; padding: 0 .04em; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: var(--qfont); font-feature-settings: "liga", "calt", "kern"; font-kerning: normal; }
 #text .w { font-weight: 400; }
 
 .w.ok { color: var(--ok); }
@@ -139,4 +139,4 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 @media(max-width:520px){.tj-report-row{grid-template-columns:1fr;gap:5px}.tj-report-word{font-size:24px}}
 
 
-@media(max-width:520px){:root{--qsize:29px}#text{line-height:2.35}#text .v{margin-bottom:8px;padding:0 2px 6px}.surah-title{margin-bottom:10px}}
+@media(max-width:520px){:root{--qsize:29px}#text{line-height:2.35}#text .v{column-gap:.24em;row-gap:.04em;margin-bottom:8px;padding:0 2px 6px}.surah-title{margin-bottom:10px}}
