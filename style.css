@@ -141,11 +141,19 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 
 @media(max-width:520px){#text{font-size:27px;line-height:2.25}#text .v{padding:8px 2px 10px}.surah-title{margin-bottom:10px}}
 
-
-/* Guaranteed visible separation between independently highlighted Quran words */
+/* One verse per line, with a real flex gap between each word and the ayah number. */
 #text .v {
-  display: block !important;
+  display: flex !important;
+  flex-direction: row;
+  flex-wrap: wrap;
   direction: rtl;
+  justify-content: flex-start;
+  align-items: baseline;
+  column-gap: .42em;
+  row-gap: .12em;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 0 4px 8px;
   text-align: right;
   white-space: normal;
   line-height: 2.3;
@@ -153,24 +161,18 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 
 #text .v .w {
   display: inline-block;
+  flex: 0 0 auto;
   white-space: nowrap;
   vertical-align: baseline;
   margin: 0;
   padding: 0;
-}
-
-#text .v .word-space {
-  display: inline-block;
-  width: .28em;
-  min-width: .28em;
-  height: 1px;
-  vertical-align: baseline;
-  flex: 0 0 .28em;
 }
 
 #text .v .num {
   display: inline-block;
+  flex: 0 0 auto;
   white-space: nowrap;
   margin: 0;
   padding: 0;
+  color: var(--mute);
 }
