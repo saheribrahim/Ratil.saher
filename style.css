@@ -1,5 +1,5 @@
 :root {
-  --qfont: "Amiri Quran", "KFGQPC Uthmanic Script HAFS", "Scheherazade New", "Traditional Arabic", "Geeza Pro", "RatilQuranpedia", serif;
+  --qfont: "Amiri Quran", "KFGQPC Uthmanic Script HAFS", "Scheherazade New", "Traditional Arabic", "Geeza Pro", serif;
   --qsize: 34px;
   --bg: #f7f5ef; --card: #fff; --ink: #1d2a24; --mute: #6b7a72;
   --line: #e3dfd2; --accent: #1f7a5a; --ok: #1f7a5a; --near: #b7791f;
@@ -46,13 +46,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 button.rec { background: var(--miss); border-color: var(--miss); color: #fff; }
 
 label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--mute); cursor: pointer; }
-#text { direction: rtl; text-align: center; white-space: normal; font-family: var(--qfont); font-size: var(--qsize); line-height: 2.5; padding: 4px 2px; font-feature-settings: "liga", "calt", "kern"; text-rendering: optimizeLegibility; word-spacing: .04em; }
+#text { direction: rtl; text-align: center; white-space: normal; font-family: var(--qfont); font-size: var(--qsize); line-height: 2.5; padding: 4px 2px; font-feature-settings: "liga", "calt", "kern"; text-rendering: optimizeLegibility; word-spacing: .1em; letter-spacing: 0; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; }
 
 
 .surah-title { display: block; margin: 0 0 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--line); font-size: .82em; line-height: 1.8; font-weight: 700; text-align: center; color: var(--ink); }
 .v { display: block; width: 100%; direction: rtl; margin: 0 0 6px; padding: 0 4px 6px; border: 0; white-space: normal; text-align: center; line-height: 2.5; }
-.w { display: inline-block; padding: 0 5px; margin: 0; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: var(--qfont); font-feature-settings: "liga", "calt", "kern"; font-kerning: normal; }
+.w { display: inline-block; padding: 0 .06em; margin: 0 .1em; border-radius: 8px; transition: color .2s, background .2s; cursor: pointer; font-family: var(--qfont); font-feature-settings: "liga", "calt", "kern"; font-kerning: normal; }
 #text .w { font-weight: 400; }
 
 .w.ok { color: var(--ok); }
@@ -76,6 +76,7 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 .mem .w.todo i { color: transparent !important; }
 .mem .w.todo.cur { background: var(--cur); }
 .mem .w.todo.hint { color: var(--ink) !important; background: none; }
+.mem .w.todo.hint i { color: var(--ink) !important; }
 .mem.fl .w.todo { color: var(--ink) !important; background: none; }
 
 #sheet { position: fixed; inset: auto 0 0 0; z-index: 40; display: none; padding: 12px; }
@@ -120,10 +121,7 @@ label.tg { display: flex; gap: 6px; align-items: center; font-size: 14px; color:
 #memBar #mStep{min-width:210px}
 @media(max-width:520px){.mem-stages{grid-template-columns:1fr}.mem-stage{flex-direction:row;justify-content:space-between}.mem-stage span{font-size:16px}}
 
-/* Word-by-word correction during reading and recitation */
-.mem .w, .mem .w.ok, .mem .w.near, .mem .w.miss, .mem .w i, .mem .w.ok i, .mem .w.near i, .mem .w.miss i { color: transparent !important; text-shadow: none !important; }
-.mem .w { background: var(--line) !important; }
-.mem .w.cur { background: var(--cur) !important; }
+/* Word-by-word feedback remains visible; only .w.todo is hidden in memorization mode. */
 .mem-feedback { margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.8; white-space: normal; }
 
 
