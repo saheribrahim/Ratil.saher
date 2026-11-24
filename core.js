@@ -126,7 +126,8 @@ function load() {
   verses.forEach((v, vi) => {
     const line = document.createElement("div");
     line.className = "v";
-    // Quran sources may use ordinary spaces or invisible Unicode word separators.
+
+    // Split the source text into individual Quranic words.
     const verseWords = String(v || "")
       .normalize("NFC")
       .split(/[\p{White_Space}\u200B\u200C\u2060\uFEFF]+/u)
@@ -134,20 +135,12 @@ function load() {
 
     verseWords.forEach(t => {
       const n = norm(t);
-      // Keep isolated Quranic marks attached to the preceding word.
+
+      // Keep an isolated Quranic mark attached to the previous word.
       if (!n && words.length && words[words.length - 1].el.parentNode === line) {
         words[words.length - 1].t += t;
         words[words.length - 1].el.textContent += t;
         return;
-      }
-
-      // Use a sized separator element instead of a collapsible text-space.
-      // This guarantees a visible gap between every pair of words.
-      if (line.querySelector(".w")) {
-        const gap = document.createElement("span");
-        gap.className = "word-space";
-        gap.setAttribute("aria-hidden", "true");
-        line.appendChild(gap);
       }
 
       const s = document.createElement("span");
@@ -160,12 +153,6 @@ function load() {
     const num = document.createElement("span");
     num.className = "num";
     num.textContent = "۝" + ad(vi + 1);
-    if (line.querySelector(".w")) {
-      const gap = document.createElement("span");
-      gap.className = "word-space";
-      gap.setAttribute("aria-hidden", "true");
-      line.appendChild(gap);
-    }
     line.appendChild(num);
     box.appendChild(line);
   });
